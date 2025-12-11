@@ -96,12 +96,22 @@ export default async function handler(req, res) {
           results.apis.resultsData = {
             keys: Object.keys(data),
             regattaName: data.RegattaName || data.regattaName,
+            raceCount: data.RaceCount,
             resultsCount: (data.Results || data.results || []).length,
+            entryResultsCount: (data.EntryResults || []).length,
+            scoringResultsCount: (data.ScoringResults || []).length,
             racesCount: (data.Races || data.races || [])?.length,
-            // Erste 2 Results komplett für Struktur-Analyse
+            // Sample von EntryResults - das sind vermutlich die echten Ergebnisse!
+            sampleEntryResults: (data.EntryResults || []).slice(0, 3),
+            // Sample von ScoringResults
+            sampleScoringResults: (data.ScoringResults || []).slice(0, 2),
+            // Alte Felder
             sampleResults: (data.Results || data.results || []).slice(0, 2),
-            // Races-Struktur
-            sampleRaces: (data.Races || data.races || []).slice(0, 2)
+            sampleRaces: (data.Races || data.races || []).slice(0, 2),
+            // RaceNames für Wettfahrten
+            raceNames: data.RaceNames,
+            // Discards (Streicher)
+            discards: data.Discards
           };
         } catch (e) {
           results.apis.resultsParseError = e.message;
