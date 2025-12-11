@@ -1470,7 +1470,7 @@ function App() {
         id: Date.now(),
         regattaName,
         boatClass: pdfResult?.boatClass || boatData.bootsklasse,
-        date: pdfResult?.date || '',
+        date: manualDate || pdfResult?.date || m2sRegattaData?.event?.date || '',
         placement,
         totalParticipants: totalParticipants || 0,
         raceCount: raceCount || 0,
@@ -1478,7 +1478,8 @@ function App() {
         crew: selectedCrew,
         invoiceAmount: amount,
         addedAt: new Date().toISOString(),
-        parserUsed: parserUsed || 'Manuell',
+        parserUsed: parserUsed || (m2sRegattaData ? 'manage2sail + PDF' : 'Manuell'),
+        manage2sailUrl: m2sRegattaData?.event?.url || '',
       };
       
       // PDF-Anhänge speichern
@@ -1502,10 +1503,15 @@ function App() {
       setManualTotalParticipants('');
       setManualRegattaName('');
       setManualRaceCount('');
+      setManualDate('');
       setSelectedCrew([]);
       setDebugText('');
       setParsingFeedback(null);
       setAddStep(0);
+      setM2sRegattaData(null);
+      setM2sSelectedRegatta(null);
+      setM2sSearchQuery('');
+      setM2sSearchResults([]);
       
       setSuccess(`"${regattaName}" hinzugefügt!`);
       setActiveTab('list');
@@ -2494,20 +2500,41 @@ function App() {
                             <div><strong>Regatta:</strong> {m2sRegattaData.event?.name}</div>
                             {m2sRegattaData.participant ? (
                               <>
-                                <div><strong>Deine Platzierung:</strong> {m2sRegattaData.participant.rank} von {m2sRegattaData.totalParticipants}</div>
+                                <div><strong>Klasse:</strong> {m2sRegattaData.participant.className || 'N/A'}</div>
+                                <div><strong>Deine Platzierung:</strong> {m2sRegattaData.participant.rank || '?'} von {m2sRegattaData.participant.totalInClass || m2sRegattaData.totalParticipants || '?'}</div>
+                                <div><strong>Wettfahrten:</strong> {m2sRegattaData.participant.raceCount || m2sRegattaData.raceCount || 'N/A'}</div>
                                 <div><strong>Skipper:</strong> {m2sRegattaData.participant.skipperName}</div>
                                 {m2sRegattaData.participant.crew && <div><strong>Crew:</strong> {m2sRegattaData.participant.crew}</div>}
                                 <div><strong>Club:</strong> {m2sRegattaData.participant.club}</div>
                               </>
                             ) : (
                               <div className={`${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
-                                ⚠️ Segelnummer "{boatData.segelnummer}" nicht in den Ergebnissen gefunden. Bitte Platzierung manuell eingeben.
+                                ⚠️ Segelnummer "{boatData.segelnummer}" nicht in den Ergebnissen gefunden. Bitte Platzierung manuell eingeben oder Ergebnisliste-PDF hochladen.
                               </div>
                             )}
-                            {m2sRegattaData.classes?.length > 0 && (
-                              <div><strong>Wettfahrten:</strong> {m2sRegattaData.classes[0]?.raceCount || 'N/A'}</div>
+                            
+                            {/* Gefundene Klassen anzeigen */}
+                            {m2sRegattaData.debug?.classNames?.length > 0 && (
+                              <div className={`mt-2 text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                                Gefundene Klassen: {m2sRegattaData.debug.classNames.join(', ')}
+                              </div>
                             )}
                           </div>
+                          
+                          {/* Hinweis wenn Daten fehlen */}
+                          {(!m2sRegattaData.participant?.rank || !m2sRegattaData.participant?.raceCount) && (
+                            <div className={`mt-3 p-3 rounded-lg text-sm ${isDark ? 'bg-amber-500/10 border border-amber-500/20 text-amber-400' : 'bg-amber-50 border border-amber-200 text-amber-700'}`}>
+                              <div className="flex items-center justify-between gap-2">
+                                <span>💡 <strong>Tipp:</strong> Falls Platzierung oder Wettfahrten fehlen, lade die Ergebnisliste-PDF hoch.</span>
+                                <button
+                                  onClick={() => setAddMode('upload')}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap ${isDark ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300' : 'bg-amber-200 hover:bg-amber-300 text-amber-800'}`}
+                                >
+                                  📄 PDF hochladen
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                       
@@ -2593,6 +2620,21 @@ function App() {
                   {/* ========== MODUS: PDF Upload ========== */}
                   {addMode === 'upload' && (
                     <>
+                      {/* Hinweis wenn von manage2sail gewechselt */}
+                      {m2sRegattaData && (
+                        <div className={`mb-4 p-3 rounded-lg text-sm ${isDark ? 'bg-violet-500/10 border border-violet-500/20 text-violet-300' : 'bg-violet-50 border border-violet-200 text-violet-700'}`}>
+                          <div className="flex items-center justify-between">
+                            <span>📋 Ergänze die fehlenden Daten aus der Ergebnisliste-PDF. Die Regatta-Daten "{manualRegattaName}" bleiben erhalten.</span>
+                            <button
+                              onClick={() => setAddMode('search')}
+                              className={`ml-2 text-xs underline ${isDark ? 'text-violet-400' : 'text-violet-600'}`}
+                            >
+                              Zurück
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    
                       <div
                         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                         onDragLeave={() => setIsDragging(false)}

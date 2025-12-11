@@ -101,7 +101,8 @@ export default async function handler(req, res) {
         uuid: c.classUUID,
         entries: c.entries?.length || 0,
         results: c.results?.length || 0,
-        raceCount: c.raceCount || 0
+        raceCount: c.raceCount || 0,
+        debug: c.debug
       })),
       participant,
       totalParticipants,
@@ -110,7 +111,9 @@ export default async function handler(req, res) {
         eventUUID,
         uuidsFound: eventData.allUUIDs.length,
         uuidsTested: testedUUIDs.size,
-        classesFound: classesWithData.length
+        classesFound: classesWithData.length,
+        classNames: classesWithData.map(c => c.className),
+        participantDebug: participant?.debug
       }
     });
 
@@ -220,7 +223,8 @@ async function loadClassData(eventUUID, classUUID) {
     classUUID: classUUID,
     entries: [],
     results: [],
-    raceCount: 0
+    raceCount: 0,
+    debug: {}
   };
 
   const headers = {
@@ -242,10 +246,11 @@ async function loadClassData(eventUUID, classUUID) {
         if (data.RegattaName || data.regattaName) {
           result.className = data.RegattaName || data.regattaName;
         }
+        result.debug.entriesKeys = Object.keys(data);
       }
     }
   } catch (err) {
-    // Entries optional
+    result.debug.entriesError = err.message;
   }
 
   // Results laden
@@ -258,22 +263,54 @@ async function loadClassData(eventUUID, classUUID) {
       if (text && text.startsWith('{')) {
         const data = JSON.parse(text);
         result.results = data.Results || data.results || [];
+        result.debug.resultsKeys = Object.keys(data);
         
         // Klassenname aus Results falls nicht aus Entries
         if (result.className === 'Unbekannte Klasse' && (data.RegattaName || data.regattaName)) {
           result.className = data.RegattaName || data.regattaName;
         }
         
-        // Wettfahrten zählen
-        if (data.Races || data.races) {
-          result.raceCount = (data.Races || data.races).length;
+        // Wettfahrten zählen - verschiedene Möglichkeiten
+        if (data.Races) {
+          result.raceCount = data.Races.length;
+          result.debug.racesSource = 'Races array';
+        } else if (data.races) {
+          result.raceCount = data.races.length;
+          result.debug.racesSource = 'races array';
+        } else if (data.RaceCount) {
+          result.raceCount = data.RaceCount;
+          result.debug.racesSource = 'RaceCount field';
+        } else if (data.raceCount) {
+          result.raceCount = data.raceCount;
+          result.debug.racesSource = 'raceCount field';
         } else if (result.results[0]?.RaceResults) {
           result.raceCount = result.results[0].RaceResults.length;
+          result.debug.racesSource = 'RaceResults[0] length';
+        } else if (result.results[0]?.raceResults) {
+          result.raceCount = result.results[0].raceResults.length;
+          result.debug.racesSource = 'raceResults[0] length';
+        }
+        
+        // Debug: Erste Result-Eintrag Struktur
+        if (result.results[0]) {
+          result.debug.firstResultKeys = Object.keys(result.results[0]);
+          result.debug.firstResultSample = {
+            SailNumber: result.results[0].SailNumber,
+            sailNumber: result.results[0].sailNumber,
+            Rank: result.results[0].Rank,
+            rank: result.results[0].rank,
+            Position: result.results[0].Position,
+            position: result.results[0].position,
+            Place: result.results[0].Place,
+            place: result.results[0].place,
+            Platz: result.results[0].Platz,
+            platz: result.results[0].platz
+          };
         }
       }
     }
   } catch (err) {
-    // Results optional
+    result.debug.resultsError = err.message;
   }
 
   return result;
@@ -301,7 +338,29 @@ function findParticipant(classesWithData, sailNumber) {
           (sailNumbersOnly.length >= 4 && entrySailNumbers === sailNumbersOnly);
         
         if (isMatch) {
-          console.log('Match found in results:', entrySail, '| Rank:', entry.Rank || entry.rank);
+          console.log('Match found in results:', entrySail);
+          console.log('Entry keys:', Object.keys(entry));
+          
+          // Platzierung aus verschiedenen möglichen Feldern extrahieren
+          const rank = entry.Rank || entry.rank || 
+                      entry.Position || entry.position || 
+                      entry.Place || entry.place ||
+                      entry.Platz || entry.platz ||
+                      entry.FinalRank || entry.finalRank ||
+                      entry.OverallRank || entry.overallRank ||
+                      null;
+          
+          console.log('Extracted rank:', rank);
+          
+          // Wettfahrten aus dem Eintrag
+          let raceCount = classData.raceCount;
+          if (entry.RaceResults) {
+            raceCount = entry.RaceResults.length;
+          } else if (entry.raceResults) {
+            raceCount = entry.raceResults.length;
+          } else if (entry.Races) {
+            raceCount = entry.Races.length;
+          }
           
           // Zusätzliche Infos aus Entries holen
           const entryData = classData.entries?.find(e => {
@@ -312,18 +371,23 @@ function findParticipant(classesWithData, sailNumber) {
           return {
             sailNumber: entry.SailNumber || entry.sailNumber,
             skipperName: entry.SkipperName || entry.skipperName || entry.HelmName || entry.helmName || 
+                        entry.Name || entry.name ||
                         entryData?.SkipperName || entryData?.skipperName || '',
-            crew: entry.Crew || entry.crew || entry.CrewName || 
+            crew: entry.Crew || entry.crew || entry.CrewName || entry.crewName ||
                   entryData?.Crew || entryData?.crew || '',
-            club: entry.ClubName || entry.clubName || entry.Club || 
+            club: entry.ClubName || entry.clubName || entry.Club || entry.club ||
                   entryData?.ClubName || entryData?.clubName || '',
             boatName: entry.BoatName || entry.boatName || entryData?.BoatName || '',
             className: classData.className,
-            rank: entry.Rank || entry.rank || entry.Position || entry.position,
-            totalPoints: entry.Total || entry.total || entry.TotalPoints,
-            netPoints: entry.Net || entry.net || entry.NetPoints,
-            raceCount: classData.raceCount,
-            totalInClass: classData.results.length
+            rank: rank,
+            totalPoints: entry.Total || entry.total || entry.TotalPoints || entry.totalPoints || entry.Points || entry.points,
+            netPoints: entry.Net || entry.net || entry.NetPoints || entry.netPoints,
+            raceCount: raceCount,
+            totalInClass: classData.results.length,
+            debug: {
+              allKeys: Object.keys(entry),
+              rankFields: { Rank: entry.Rank, rank: entry.rank, Position: entry.Position, Place: entry.Place }
+            }
           };
         }
       }
