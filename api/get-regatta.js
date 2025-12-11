@@ -1,5 +1,6 @@
 // /api/get-regatta.js
 // Serverless Function zum Laden von Regatta-Details von manage2sail
+// Verbesserte Version mit robuster UUID-Extraktion und Segelnummer-Matching
 
 export default async function handler(req, res) {
   // CORS Headers
@@ -29,75 +30,57 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Could not extract event slug' });
     }
 
-    console.log('Loading regatta:', eventSlug);
+    console.log('Loading regatta:', eventSlug, '| sailNumber:', sailNumber);
 
-    // 1. Event-Seite laden (verschiedene Locales probieren)
-    const locales = ['de-DE', 'en-US', 'de', 'en'];
-    let eventHtml = null;
-    let finalUrl = null;
-
-    for (const locale of locales) {
-      try {
-        const testUrl = `https://www.manage2sail.com/${locale}/event/${eventSlug}`;
-        const response = await fetch(testUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'text/html',
-            'Accept-Language': 'de-DE,de;q=0.9,en;q=0.8'
-          },
-          redirect: 'follow'
-        });
-
-        if (response.ok) {
-          const html = await response.text();
-          // Prüfe ob echte Event-Seite (nicht Error oder Redirect)
-          if (html.includes('event-') || html.includes('regatta') || html.includes('Classes') || html.includes('Klassen') || html.includes('Entries')) {
-            eventHtml = html;
-            finalUrl = testUrl;
-            console.log('Found event at:', testUrl);
-            break;
-          }
-        }
-      } catch (e) {
-        console.log(`Locale ${locale} failed:`, e.message);
-      }
-    }
-
+    // 1. Event-Seite laden
+    const { html: eventHtml, finalUrl } = await loadEventPage(eventSlug);
+    
     if (!eventHtml) {
       return res.status(404).json({ 
         error: 'Regatta nicht gefunden',
-        slug: eventSlug,
-        hint: 'Bitte prüfe den Link auf manage2sail.com'
+        slug: eventSlug
       });
     }
 
-    // 2. Event-Daten parsen
+    // 2. Event-Daten und alle möglichen UUIDs parsen
     const eventData = parseEventPage(eventHtml, eventSlug);
-    console.log('Parsed event:', eventData.name, '| UUID:', eventData.eventUUID, '| Classes:', eventData.classes.length);
+    console.log('Event:', eventData.name, '| UUID:', eventData.eventUUID, '| Potential class UUIDs:', eventData.allUUIDs.length);
 
-    // 3. Klassen-Daten laden (nur wenn UUID gefunden)
+    // 3. Für jede potenzielle UUID versuchen, Klassen-Daten zu laden
     const classesWithData = [];
+    const testedUUIDs = new Set();
     
-    if (eventData.eventUUID && eventData.classes.length > 0) {
-      // Parallel laden für Geschwindigkeit
-      const classPromises = eventData.classes.slice(0, 10).map(classInfo => 
-        loadClassData(eventData.eventUUID, classInfo).catch(err => {
-          console.log(`Class ${classInfo.name} error:`, err.message);
-          return null;
-        })
-      );
+    // Wenn wir eine Event-UUID haben
+    const eventUUID = eventData.eventUUID || eventSlug;
+    
+    // Alle gefundenen UUIDs als potenzielle Klassen testen
+    for (const potentialClassUUID of eventData.allUUIDs) {
+      if (testedUUIDs.has(potentialClassUUID)) continue;
+      if (potentialClassUUID === eventUUID) continue; // Event-UUID überspringen
+      testedUUIDs.add(potentialClassUUID);
       
-      const results = await Promise.all(classPromises);
-      classesWithData.push(...results.filter(r => r && (r.entries?.length > 0 || r.results?.length > 0)));
+      try {
+        const classData = await loadClassData(eventUUID, potentialClassUUID);
+        if (classData && (classData.entries?.length > 0 || classData.results?.length > 0)) {
+          classesWithData.push(classData);
+          console.log('Found class:', classData.className, '| Entries:', classData.entries?.length, '| Results:', classData.results?.length);
+        }
+      } catch (err) {
+        // UUID war keine Klasse, ignorieren
+      }
+      
+      // Max 15 Klassen testen um Timeout zu vermeiden
+      if (classesWithData.length >= 15) break;
     }
 
     // 4. Teilnehmer suchen
     let participant = null;
     if (sailNumber) {
       participant = findParticipant(classesWithData, sailNumber);
+      console.log('Participant found:', participant ? 'yes' : 'no');
     }
 
-    // 5. Gesamtstatistik
+    // 5. Statistiken
     const totalParticipants = classesWithData.reduce(
       (sum, c) => sum + Math.max(c.results?.length || 0, c.entries?.length || 0), 0
     );
@@ -109,9 +92,8 @@ export default async function handler(req, res) {
       event: {
         name: eventData.name,
         slug: eventSlug,
-        uuid: eventData.eventUUID,
+        uuid: eventUUID,
         date: eventData.date,
-        place: eventData.place,
         url: finalUrl
       },
       classes: classesWithData.map(c => ({
@@ -125,9 +107,10 @@ export default async function handler(req, res) {
       totalParticipants,
       raceCount: maxRaceCount,
       debug: {
-        foundUUID: !!eventData.eventUUID,
-        classesInHtml: eventData.classes.length,
-        classesLoaded: classesWithData.length
+        eventUUID,
+        uuidsFound: eventData.allUUIDs.length,
+        uuidsTested: testedUUIDs.size,
+        classesFound: classesWithData.length
       }
     });
 
@@ -140,13 +123,44 @@ export default async function handler(req, res) {
   }
 }
 
+async function loadEventPage(eventSlug) {
+  const locales = ['de-DE', 'en-US', 'de', 'en', 'no'];
+  
+  for (const locale of locales) {
+    try {
+      const testUrl = `https://www.manage2sail.com/${locale}/event/${eventSlug}`;
+      console.log('Trying:', testUrl);
+      
+      const response = await fetch(testUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml',
+          'Accept-Language': 'de-DE,de;q=0.9,en;q=0.8'
+        },
+        redirect: 'follow'
+      });
+
+      if (response.ok) {
+        const html = await response.text();
+        // Prüfe ob echte Event-Seite
+        if (html.length > 1000 && (html.includes('manage2sail') || html.includes('event'))) {
+          return { html, finalUrl: testUrl };
+        }
+      }
+    } catch (e) {
+      console.log(`Locale ${locale} failed:`, e.message);
+    }
+  }
+  
+  return { html: null, finalUrl: null };
+}
+
 function parseEventPage(html, slug) {
   const data = {
     name: slug,
     eventUUID: null,
     date: null,
-    place: '',
-    classes: []
+    allUUIDs: []
   };
 
   // Event-Name aus Title
@@ -154,99 +168,56 @@ function parseEventPage(html, slug) {
   if (titleMatch) {
     data.name = titleMatch[1]
       .replace(/\s*manage2sail\s*/gi, '')
-      .replace(/\s*-\s*Register to the event.*$/i, '')
-      .replace(/\s*-\s*$/,'')
+      .replace(/\s*-\s*Register.*$/i, '')
       .trim();
   }
 
-  // Event-UUID finden - verschiedene Patterns
-  const uuidPatterns = [
-    /eventId["']?\s*[:=]\s*["']?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
-    /data-event-id=["']([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
-    /\/api\/event\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
-    /"eventId":"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"/i,
-    /event\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
+  // ALLE UUIDs im HTML finden
+  const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+  const allMatches = html.match(uuidRegex) || [];
+  
+  // Unique UUIDs sammeln
+  const uniqueUUIDs = [...new Set(allMatches.map(u => u.toLowerCase()))];
+  data.allUUIDs = uniqueUUIDs;
+
+  // Event-UUID identifizieren (häufig erste UUID oder in bestimmten Patterns)
+  const eventUUIDPatterns = [
+    /eventId["']?\s*[:=]\s*["']?([0-9a-f-]{36})/i,
+    /\/event\/([0-9a-f-]{36})/i,
+    /"eventId":"([0-9a-f-]{36})"/i,
   ];
 
-  for (const pattern of uuidPatterns) {
+  for (const pattern of eventUUIDPatterns) {
     const match = html.match(pattern);
     if (match && match[1]) {
-      data.eventUUID = match[1];
+      data.eventUUID = match[1].toLowerCase();
       break;
     }
   }
 
   // Falls Slug selbst eine UUID ist
   if (!data.eventUUID && slug.match(/^[0-9a-f]{8}-[0-9a-f]{4}/i)) {
-    data.eventUUID = slug;
+    data.eventUUID = slug.toLowerCase();
   }
 
-  // Klassen-UUIDs finden
-  const classPatterns = [
-    /classId=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi,
-    /regattaId=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi,
-    /"classId":"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"/gi,
-  ];
-
-  const classUUIDs = new Set();
-  for (const pattern of classPatterns) {
-    let match;
-    while ((match = pattern.exec(html)) !== null) {
-      classUUIDs.add(match[1]);
-    }
+  // Falls immer noch keine Event-UUID, nimm die erste gefundene
+  if (!data.eventUUID && uniqueUUIDs.length > 0) {
+    data.eventUUID = uniqueUUIDs[0];
   }
-
-  // Klassennamen extrahieren (falls verfügbar)
-  const classesMap = new Map();
-  
-  // Suche nach Klassen-Links mit Namen
-  const classLinkRegex = /href="[^"]*classId=([0-9a-f-]{36})[^"]*"[^>]*>([^<]+)/gi;
-  let match;
-  while ((match = classLinkRegex.exec(html)) !== null) {
-    const uuid = match[1];
-    const name = match[2].trim();
-    if (name && name.length < 60 && !classesMap.has(uuid)) {
-      classesMap.set(uuid, { uuid, name });
-    }
-  }
-
-  // Verbleibende UUIDs ohne Namen
-  for (const uuid of classUUIDs) {
-    if (!classesMap.has(uuid)) {
-      classesMap.set(uuid, { uuid, name: `Klasse` });
-    }
-  }
-
-  data.classes = Array.from(classesMap.values());
 
   // Datum extrahieren
-  const datePatterns = [
-    /(\d{2})\.(\d{2})\.(\d{4})/,
-    /(\d{2})\/(\d{2})\/(\d{4})/,
-    /(\d{4})-(\d{2})-(\d{2})/,
-  ];
-  
-  for (const pattern of datePatterns) {
-    const dateMatch = html.match(pattern);
-    if (dateMatch) {
-      if (pattern.source.startsWith('(\\d{4})')) {
-        // YYYY-MM-DD Format
-        data.date = dateMatch[0];
-      } else {
-        // DD.MM.YYYY oder DD/MM/YYYY
-        data.date = `${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`;
-      }
-      break;
-    }
+  const dateMatch = html.match(/(\d{2})[./](\d{2})[./](\d{4})/);
+  if (dateMatch) {
+    data.date = `${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`;
   }
 
   return data;
 }
 
-async function loadClassData(eventUUID, classInfo) {
+async function loadClassData(eventUUID, classUUID) {
   const result = {
-    className: classInfo.name,
-    classUUID: classInfo.uuid,
+    className: 'Unbekannte Klasse',
+    classUUID: classUUID,
     entries: [],
     results: [],
     raceCount: 0
@@ -260,14 +231,17 @@ async function loadClassData(eventUUID, classInfo) {
 
   // Entries laden
   try {
-    const entriesUrl = `https://www.manage2sail.com/api/event/${eventUUID}/regattaentry?regattaId=${classInfo.uuid}`;
+    const entriesUrl = `https://www.manage2sail.com/api/event/${eventUUID}/regattaentry?regattaId=${classUUID}`;
     const entriesResponse = await fetch(entriesUrl, { headers });
 
     if (entriesResponse.ok) {
-      const data = await entriesResponse.json();
-      result.entries = data.Entries || data.entries || [];
-      if (data.RegattaName || data.regattaName) {
-        result.className = data.RegattaName || data.regattaName;
+      const text = await entriesResponse.text();
+      if (text && text.startsWith('{')) {
+        const data = JSON.parse(text);
+        result.entries = data.Entries || data.entries || [];
+        if (data.RegattaName || data.regattaName) {
+          result.className = data.RegattaName || data.regattaName;
+        }
       }
     }
   } catch (err) {
@@ -276,20 +250,26 @@ async function loadClassData(eventUUID, classInfo) {
 
   // Results laden
   try {
-    const resultsUrl = `https://www.manage2sail.com/api/event/${eventUUID}/regattaresult/${classInfo.uuid}`;
+    const resultsUrl = `https://www.manage2sail.com/api/event/${eventUUID}/regattaresult/${classUUID}`;
     const resultsResponse = await fetch(resultsUrl, { headers });
 
     if (resultsResponse.ok) {
-      const data = await resultsResponse.json();
-      result.results = data.Results || data.results || data.Entries || [];
-      
-      // Wettfahrten zählen
-      if (data.Races || data.races) {
-        result.raceCount = (data.Races || data.races).length;
-      } else if (result.results[0]?.RaceResults) {
-        result.raceCount = result.results[0].RaceResults.length;
-      } else if (result.results[0]?.raceResults) {
-        result.raceCount = result.results[0].raceResults.length;
+      const text = await resultsResponse.text();
+      if (text && text.startsWith('{')) {
+        const data = JSON.parse(text);
+        result.results = data.Results || data.results || [];
+        
+        // Klassenname aus Results falls nicht aus Entries
+        if (result.className === 'Unbekannte Klasse' && (data.RegattaName || data.regattaName)) {
+          result.className = data.RegattaName || data.regattaName;
+        }
+        
+        // Wettfahrten zählen
+        if (data.Races || data.races) {
+          result.raceCount = (data.Races || data.races).length;
+        } else if (result.results[0]?.RaceResults) {
+          result.raceCount = result.results[0].RaceResults.length;
+        }
       }
     }
   } catch (err) {
@@ -300,44 +280,93 @@ async function loadClassData(eventUUID, classInfo) {
 }
 
 function findParticipant(classesWithData, sailNumber) {
-  // Normalisiere Segelnummer
+  // Normalisiere Segelnummer - entferne Leerzeichen und Ländercode für numerischen Vergleich
   const sailClean = sailNumber.replace(/\s+/g, '').toUpperCase();
   const sailNumbersOnly = sailNumber.replace(/[^0-9]/g, '');
   
+  console.log('Searching for sail:', sailClean, '| numbers only:', sailNumbersOnly);
+  
   for (const classData of classesWithData) {
-    // Kombiniere Entries und Results
-    const allEntries = [...(classData.entries || []), ...(classData.results || [])];
-    
-    for (const entry of allEntries) {
-      const entrySail = (entry.SailNumber || entry.sailNumber || '').replace(/\s+/g, '').toUpperCase();
-      
-      // Verschiedene Match-Strategien
-      const isMatch = 
-        entrySail === sailClean ||
-        entrySail.endsWith(sailNumbersOnly) ||
-        (sailNumbersOnly.length >= 3 && entrySail.includes(sailNumbersOnly));
-      
-      if (isMatch) {
-        // Finde zugehöriges Result
-        const resultEntry = classData.results?.find(r => {
-          const rSail = (r.SailNumber || r.sailNumber || '').replace(/\s+/g, '');
-          return rSail.includes(sailNumbersOnly);
-        });
+    // Zuerst in Results suchen (haben Platzierung)
+    if (classData.results && classData.results.length > 0) {
+      for (const entry of classData.results) {
+        const entrySail = (entry.SailNumber || entry.sailNumber || '').replace(/\s+/g, '').toUpperCase();
+        const entrySailNumbers = entrySail.replace(/[^0-9]/g, '');
         
-        return {
-          sailNumber: entry.SailNumber || entry.sailNumber,
-          skipperName: entry.SkipperName || entry.skipperName || entry.HelmName || entry.helmName || entry.Name || entry.name,
-          crew: entry.Crew || entry.crew || entry.CrewName || entry.crewName || '',
-          club: entry.ClubName || entry.clubName || entry.Club || entry.club || '',
-          boatName: entry.BoatName || entry.boatName || '',
-          className: classData.className,
-          rank: resultEntry?.Rank || resultEntry?.rank || resultEntry?.Position || resultEntry?.position || entry.Rank || entry.rank,
-          totalPoints: resultEntry?.Total || resultEntry?.total || resultEntry?.TotalPoints,
-          netPoints: resultEntry?.Net || resultEntry?.net || resultEntry?.NetPoints,
-          raceCount: classData.raceCount
-        };
+        // Verschiedene Match-Strategien
+        const isMatch = 
+          entrySail === sailClean ||
+          entrySailNumbers === sailNumbersOnly ||
+          (sailNumbersOnly.length >= 4 && entrySail.endsWith(sailNumbersOnly)) ||
+          (sailNumbersOnly.length >= 4 && entrySailNumbers === sailNumbersOnly);
+        
+        if (isMatch) {
+          console.log('Match found in results:', entrySail, '| Rank:', entry.Rank || entry.rank);
+          
+          // Zusätzliche Infos aus Entries holen
+          const entryData = classData.entries?.find(e => {
+            const eSail = (e.SailNumber || e.sailNumber || '').replace(/\s+/g, '');
+            return eSail.includes(sailNumbersOnly);
+          });
+          
+          return {
+            sailNumber: entry.SailNumber || entry.sailNumber,
+            skipperName: entry.SkipperName || entry.skipperName || entry.HelmName || entry.helmName || 
+                        entryData?.SkipperName || entryData?.skipperName || '',
+            crew: entry.Crew || entry.crew || entry.CrewName || 
+                  entryData?.Crew || entryData?.crew || '',
+            club: entry.ClubName || entry.clubName || entry.Club || 
+                  entryData?.ClubName || entryData?.clubName || '',
+            boatName: entry.BoatName || entry.boatName || entryData?.BoatName || '',
+            className: classData.className,
+            rank: entry.Rank || entry.rank || entry.Position || entry.position,
+            totalPoints: entry.Total || entry.total || entry.TotalPoints,
+            netPoints: entry.Net || entry.net || entry.NetPoints,
+            raceCount: classData.raceCount,
+            totalInClass: classData.results.length
+          };
+        }
       }
     }
+    
+    // Falls nicht in Results gefunden, in Entries suchen
+    if (classData.entries && classData.entries.length > 0) {
+      for (const entry of classData.entries) {
+        const entrySail = (entry.SailNumber || entry.sailNumber || '').replace(/\s+/g, '').toUpperCase();
+        const entrySailNumbers = entrySail.replace(/[^0-9]/g, '');
+        
+        const isMatch = 
+          entrySail === sailClean ||
+          entrySailNumbers === sailNumbersOnly ||
+          (sailNumbersOnly.length >= 4 && entrySail.endsWith(sailNumbersOnly));
+        
+        if (isMatch) {
+          console.log('Match found in entries:', entrySail);
+          
+          return {
+            sailNumber: entry.SailNumber || entry.sailNumber,
+            skipperName: entry.SkipperName || entry.skipperName || entry.HelmName || '',
+            crew: entry.Crew || entry.crew || entry.CrewName || '',
+            club: entry.ClubName || entry.clubName || entry.Club || '',
+            boatName: entry.BoatName || entry.boatName || '',
+            className: classData.className,
+            rank: null, // Keine Ergebnisse
+            raceCount: classData.raceCount,
+            totalInClass: classData.entries.length
+          };
+        }
+      }
+    }
+  }
+  
+  // Debug: Alle gefundenen Segelnummern ausgeben
+  console.log('No match found. Available sail numbers in all classes:');
+  for (const classData of classesWithData) {
+    const sails = [...(classData.results || []), ...(classData.entries || [])]
+      .map(e => e.SailNumber || e.sailNumber)
+      .filter(Boolean)
+      .slice(0, 5);
+    console.log(`  ${classData.className}:`, sails.join(', '));
   }
   
   return null;

@@ -1322,11 +1322,14 @@ function App() {
         if (data.participant?.rank) {
           setManualPlacement(data.participant.rank.toString());
         }
-        if (data.totalParticipants) {
-          setManualTotalParticipants(data.totalParticipants.toString());
-        }
+        // totalParticipants wird weiter unten gesetzt (mit totalInClass-Priorisierung)
         if (data.classes?.[0]?.raceCount) {
           setManualRaceCount(data.classes[0].raceCount.toString());
+        }
+        
+        // Wettfahrten aus participant wenn vorhanden
+        if (data.participant?.raceCount) {
+          setManualRaceCount(data.participant.raceCount.toString());
         }
         
         // Crew automatisch setzen wenn vorhanden
@@ -1338,6 +1341,13 @@ function App() {
             verein: data.participant.club || ''
           }));
           setSelectedCrew(crewMembers);
+        }
+        
+        // Teilnehmerzahl: Wenn participant.totalInClass vorhanden (genauere Zahl pro Klasse), nutze diese
+        if (data.participant?.totalInClass) {
+          setManualTotalParticipants(data.participant.totalInClass.toString());
+        } else if (data.totalParticipants) {
+          setManualTotalParticipants(data.totalParticipants.toString());
         }
         
         setSuccess('Regatta-Daten erfolgreich geladen!');
