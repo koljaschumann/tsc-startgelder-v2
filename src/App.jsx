@@ -406,7 +406,7 @@ function App() {
   const [m2sLoadingDetails, setM2sLoadingDetails] = useState(false);
   const [m2sRegattaData, setM2sRegattaData] = useState(null);
   const [m2sError, setM2sError] = useState(null);
-  const [addMode, setAddMode] = useState('search'); // 'search' | 'upload' | 'manual'
+  const [addMode, setAddMode] = useState('upload'); // 'upload' | 'search' | 'manual' - PDF ist primär
   
   // Admin-Passwort (kann hier geändert werden)
   const ADMIN_PASSWORD = 'TSC2025!';
@@ -459,6 +459,7 @@ function App() {
   
   // Crew für aktuelle Regatta
   const [selectedCrew, setSelectedCrew] = useState([]);
+  const [detectedCrewFromPdf, setDetectedCrewFromPdf] = useState(null); // NEU: Aus PDF erkannte Crew
   
   // Progress Step (0: Ergebnis, 1: Crew, 2: Rechnung)
   const [addStep, setAddStep] = useState(0);
@@ -664,7 +665,7 @@ function App() {
 
   // === ROBUSTER PARSER v18 - MULTI-FORMAT ===
   const parseRegattaPDF = (text, sailNumber) => {
-    console.log('=== PARSING START (v18 Robust Parser) ===');
+    console.log('=== PARSING START (v21 mit Crew-Extraktion) ===');
     console.log('Segelnummer:', sailNumber);
     console.log('Text-Länge:', text?.length);
     
@@ -678,7 +679,8 @@ function App() {
       participant: null,
       allResults: [],
       feedback: null,
-      confidence: 'low'
+      confidence: 'low',
+      crew: null  // NEU: Crew für Mehrpersonenboote
     };
 
     if (!text || !sailNumber) {
@@ -885,6 +887,50 @@ function App() {
           };
           result.success = true;
           result.confidence = allNumbers.length === 1 ? 'high' : 'medium';
+          
+          // === CREW EXTRAKTION für Mehrpersonenboote ===
+          // Suche nach Crew-Namen in der Zeile oder der nächsten Zeile
+          const extractCrew = (searchText) => {
+            // Pattern 1: "Name NACHNAME / Crew NACHNAME" (Schrägstrich-Trennung)
+            const slashPattern = /([A-ZÄÖÜa-zäöüß]+\s+[A-ZÄÖÜ][A-ZÄÖÜa-zäöüß]+)\s*[\/\|]\s*([A-ZÄÖÜa-zäöüß]+\s+[A-ZÄÖÜ][A-ZÄÖÜa-zäöüß]+)/;
+            const slashMatch = searchText.match(slashPattern);
+            if (slashMatch) {
+              return slashMatch[2].trim();
+            }
+            
+            // Pattern 2: "Crew: Name" oder "Vorschoter: Name"
+            const crewLabelPattern = /(?:Crew|Vorschoter|Crewmitglied|Partner)[:\s]+([A-ZÄÖÜa-zäöüß]+\s+[A-ZÄÖÜ][A-ZÄÖÜa-zäöüß]+)/i;
+            const crewLabelMatch = searchText.match(crewLabelPattern);
+            if (crewLabelMatch) {
+              return crewLabelMatch[1].trim();
+            }
+            
+            // Pattern 3: Zwei Namen durch Komma getrennt "NACHNAME Vorname, NACHNAME2 Vorname2"
+            const commaPattern = /([A-ZÄÖÜ]+\s+[A-Za-zäöüÄÖÜß]+)\s*,\s*([A-ZÄÖÜ]+\s+[A-Za-zäöüÄÖÜß]+)/;
+            const commaMatch = searchText.match(commaPattern);
+            if (commaMatch && !commaMatch[0].includes('Club') && !commaMatch[0].includes('Verein')) {
+              return commaMatch[2].trim();
+            }
+            
+            return null;
+          };
+          
+          // Suche in der gefundenen Zeile
+          let crewName = extractCrew(sailNumberLine);
+          
+          // Falls nicht gefunden, suche in der nächsten Zeile
+          if (!crewName && sailNumberLineIndex >= 0 && sailNumberLineIndex < lines.length - 1) {
+            const nextLine = lines[sailNumberLineIndex + 1];
+            // Nur wenn die nächste Zeile kein neuer Teilnehmer ist (keine Platzierung am Anfang)
+            if (!/^\s*\d{1,3}\s/.test(nextLine)) {
+              crewName = extractCrew(nextLine);
+            }
+          }
+          
+          if (crewName) {
+            result.crew = crewName;
+            console.log('Crew gefunden:', crewName);
+          }
         }
       }
       
@@ -1118,6 +1164,14 @@ function App() {
           if (result.participant?.rank) setManualPlacement(result.participant.rank.toString());
           if (result.totalParticipants) setManualTotalParticipants(result.totalParticipants.toString());
           if (result.raceCount) setManualRaceCount(result.raceCount.toString());
+          
+          // NEU: Erkannte Crew aus PDF speichern (für Mehrpersonenboote)
+          if (result.crew) {
+            setDetectedCrewFromPdf(result.crew);
+            console.log('Crew aus PDF erkannt:', result.crew);
+          } else {
+            setDetectedCrewFromPdf(null);
+          }
           
           // NICHT automatisch zum nächsten Step springen - Benutzer soll korrigieren können
         } else {
@@ -1505,6 +1559,7 @@ function App() {
       setManualRaceCount('');
       setManualDate('');
       setSelectedCrew([]);
+      setDetectedCrewFromPdf(null);  // NEU
       setDebugText('');
       setParsingFeedback(null);
       setAddStep(0);
@@ -2362,13 +2417,13 @@ function App() {
                     <IconBadge icon={Icons.chart} color="purple" />
                     <div>
                       <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Regatta-Ergebnis</h2>
-                      <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Daten von manage2sail laden oder PDF hochladen</p>
+                      <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Ergebnisliste-PDF hochladen (empfohlen)</p>
                     </div>
                   </div>
                   
                   {/* Modus-Auswahl */}
                   <div className="flex gap-2 mb-6">
-                    {['search', 'upload', 'manual'].map((mode) => (
+                    {['upload', 'search', 'manual'].map((mode) => (
                       <button
                         key={mode}
                         onClick={() => {
@@ -2384,8 +2439,8 @@ function App() {
                               : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
                         }`}
                       >
-                        {mode === 'search' && '🔍 manage2sail'}
                         {mode === 'upload' && '📄 PDF Upload'}
+                        {mode === 'search' && '🔍 manage2sail'}
                         {mode === 'manual' && '✏️ Manuell'}
                       </button>
                     ))}
@@ -2917,6 +2972,32 @@ function App() {
                             {member.name} ({member.verein || 'k.A.'})
                           </div>
                         ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* NEU: Erkannte Crew aus PDF anzeigen */}
+                  {detectedCrewFromPdf && !selectedCrew.find(c => c.name.toUpperCase().includes(detectedCrewFromPdf.split(' ')[0].toUpperCase())) && (
+                    <div className={`mb-4 p-4 rounded-xl border ${isDark ? 'bg-violet-500/10 border-violet-500/30' : 'bg-violet-50 border-violet-200'}`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-violet-500">✨</span>
+                        <span className={`text-sm font-medium ${isDark ? 'text-violet-300' : 'text-violet-700'}`}>
+                          Crew aus Ergebnisliste erkannt:
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{detectedCrewFromPdf}</span>
+                        <button
+                          onClick={() => {
+                            const member = { name: detectedCrewFromPdf, verein: 'TSC' };
+                            addCrewMember(member);
+                            addToCrewDatabase(member);
+                            setDetectedCrewFromPdf(null);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-violet-600 text-white text-sm hover:bg-violet-500 flex items-center gap-1"
+                        >
+                          {Icons.plus} Übernehmen
+                        </button>
                       </div>
                     </div>
                   )}
