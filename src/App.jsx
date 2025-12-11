@@ -1216,10 +1216,10 @@ function App() {
   // MANAGE2SAIL INTEGRATION
   // ============================================
   
-  // Regatta auf manage2sail suchen
+  // Regatta auf manage2sail suchen oder direkt per URL laden
   const searchManage2Sail = async () => {
     if (!m2sSearchQuery.trim()) {
-      setM2sError('Bitte Suchbegriff eingeben');
+      setM2sError('Bitte Suchbegriff oder Link eingeben');
       return;
     }
     
@@ -1230,8 +1230,31 @@ function App() {
     setM2sRegattaData(null);
     
     try {
+      const input = m2sSearchQuery.trim();
+      
+      // Prüfe ob es eine manage2sail URL ist
+      const urlMatch = input.match(/manage2sail\.com\/[^/]+\/event\/([^/?#\s]+)/i);
+      
+      if (urlMatch) {
+        // Direkt laden wenn URL erkannt
+        const slug = urlMatch[1];
+        console.log('URL erkannt, lade Slug:', slug);
+        
+        // Erstelle ein "Ergebnis" und lade direkt
+        const regatta = {
+          slug: slug,
+          name: slug.replace(/[-_]/g, ' '),
+          url: input.includes('http') ? input : `https://www.manage2sail.com/de-DE/event/${slug}`
+        };
+        
+        // Direkt Details laden
+        await loadRegattaDetails(regatta);
+        return;
+      }
+      
+      // Ansonsten normale Suche
       const year = new Date().getFullYear();
-      const response = await fetch(`/api/search-regatta?query=${encodeURIComponent(m2sSearchQuery)}&year=${year}`);
+      const response = await fetch(`/api/search-regatta?query=${encodeURIComponent(input)}&year=${year}`);
       
       if (!response.ok) {
         throw new Error(`Suche fehlgeschlagen (${response.status})`);
@@ -1243,13 +1266,15 @@ function App() {
         setM2sSearchResults(data.results);
       } else {
         // Auch im Vorjahr suchen
-        const lastYearResponse = await fetch(`/api/search-regatta?query=${encodeURIComponent(m2sSearchQuery)}&year=${year - 1}`);
+        const lastYearResponse = await fetch(`/api/search-regatta?query=${encodeURIComponent(input)}&year=${year - 1}`);
         const lastYearData = await lastYearResponse.json();
         
         if (lastYearData.success && lastYearData.results?.length > 0) {
           setM2sSearchResults(lastYearData.results);
         } else {
-          setM2sError('Keine Regatten gefunden. Versuche einen anderen Suchbegriff.');
+          setM2sError(
+            'Keine Regatten gefunden. Tipp: Kopiere den Link direkt von manage2sail.com'
+          );
         }
       }
     } catch (err) {
@@ -1262,23 +1287,24 @@ function App() {
   
   // Regatta-Details von manage2sail laden
   const loadRegattaDetails = async (regatta) => {
-    if (!boatData.segelnummer) {
-      setM2sError('Bitte zuerst die Segelnummer in den Bootsdaten eingeben');
-      return;
-    }
-    
     setM2sSelectedRegatta(regatta);
     setM2sLoadingDetails(true);
     setM2sError(null);
     setM2sRegattaData(null);
     
     try {
+      // Segelnummer optional mitsenden
+      const sailParam = boatData.segelnummer 
+        ? `&sailNumber=${encodeURIComponent(boatData.segelnummer)}` 
+        : '';
+      
       const response = await fetch(
-        `/api/get-regatta?slug=${encodeURIComponent(regatta.slug)}&sailNumber=${encodeURIComponent(boatData.segelnummer)}`
+        `/api/get-regatta?slug=${encodeURIComponent(regatta.slug)}${sailParam}`
       );
       
       if (!response.ok) {
-        throw new Error(`Laden fehlgeschlagen (${response.status})`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Laden fehlgeschlagen (${response.status})`);
       }
       
       const data = await response.json();
@@ -2352,16 +2378,18 @@ function App() {
                   {/* ========== MODUS: manage2sail Suche ========== */}
                   {addMode === 'search' && (
                     <div className="space-y-4">
-                      {/* Suchfeld */}
+                      {/* Suchfeld / URL-Eingabe */}
                       <div>
-                        <label className={`block text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Regatta suchen</label>
+                        <label className={`block text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                          Regatta suchen oder manage2sail-Link einfügen
+                        </label>
                         <div className="flex gap-2">
                           <input
                             type="text"
                             value={m2sSearchQuery}
                             onChange={(e) => setM2sSearchQuery(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && searchManage2Sail()}
-                            placeholder="z.B. Nikolausregatta, Herbstpokal, IDM..."
+                            placeholder="Name, Slug oder manage2sail.com/event/... Link"
                             className={`flex-1 px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
                           />
                           <button
@@ -2374,8 +2402,11 @@ function App() {
                             ) : (
                               Icons.search
                             )}
-                            Suchen
+                            {m2sSearchQuery.includes('manage2sail') ? 'Laden' : 'Suchen'}
                           </button>
+                        </div>
+                        <div className={`mt-2 text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                          💡 Tipp: Am einfachsten: Öffne <a href="https://manage2sail.com/de-DE/event" target="_blank" rel="noopener" className="text-violet-400 hover:text-violet-300 underline">manage2sail.com</a>, suche deine Regatta und kopiere den Link hierher.
                         </div>
                       </div>
                       
@@ -2409,6 +2440,7 @@ function App() {
                                     {result.fromDate && `${result.fromDate}${result.year} `}
                                     {result.place && `• ${result.place} `}
                                     {result.country && `(${result.country})`}
+                                    {result.source === 'known' && ' • Vorgeschlagen'}
                                   </div>
                                 </div>
                                 <svg className={`w-5 h-5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
@@ -2416,7 +2448,7 @@ function App() {
                             ))}
                           </div>
                         </div>
-                      )}
+                      )}}
                       
                       {/* Lade-Anzeige für Details */}
                       {m2sLoadingDetails && (

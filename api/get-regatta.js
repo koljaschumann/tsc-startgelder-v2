@@ -1,10 +1,10 @@
 // /api/get-regatta.js
-// Serverless Function zum Laden aller Regatta-Details von manage2sail
+// Serverless Function zum Laden von Regatta-Details von manage2sail
 
 export default async function handler(req, res) {
   // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
@@ -31,82 +31,80 @@ export default async function handler(req, res) {
 
     console.log('Loading regatta:', eventSlug);
 
-    // 1. Event-Seite laden um UUID zu bekommen
-    const eventUrl = `https://www.manage2sail.com/de-DE/event/${eventSlug}`;
-    const eventResponse = await fetch(eventUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+    // 1. Event-Seite laden (verschiedene Locales probieren)
+    const locales = ['de-DE', 'en-US', 'de', 'en'];
+    let eventHtml = null;
+    let finalUrl = null;
+
+    for (const locale of locales) {
+      try {
+        const testUrl = `https://www.manage2sail.com/${locale}/event/${eventSlug}`;
+        const response = await fetch(testUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html',
+            'Accept-Language': 'de-DE,de;q=0.9,en;q=0.8'
+          },
+          redirect: 'follow'
+        });
+
+        if (response.ok) {
+          const html = await response.text();
+          // Prüfe ob echte Event-Seite (nicht Error oder Redirect)
+          if (html.includes('event-') || html.includes('regatta') || html.includes('Classes') || html.includes('Klassen') || html.includes('Entries')) {
+            eventHtml = html;
+            finalUrl = testUrl;
+            console.log('Found event at:', testUrl);
+            break;
+          }
+        }
+      } catch (e) {
+        console.log(`Locale ${locale} failed:`, e.message);
       }
-    });
-
-    if (!eventResponse.ok) {
-      throw new Error(`Event page returned ${eventResponse.status}`);
     }
 
-    const eventHtml = await eventResponse.text();
-    
-    // 2. Event-UUID und Klassen-UUIDs extrahieren
+    if (!eventHtml) {
+      return res.status(404).json({ 
+        error: 'Regatta nicht gefunden',
+        slug: eventSlug,
+        hint: 'Bitte prüfe den Link auf manage2sail.com'
+      });
+    }
+
+    // 2. Event-Daten parsen
     const eventData = parseEventPage(eventHtml, eventSlug);
-    
-    if (!eventData.eventUUID) {
-      // Versuche alternative Methode
-      console.log('Trying alternative UUID extraction...');
-      const altUUID = extractUUIDAlternative(eventHtml);
-      if (altUUID) eventData.eventUUID = altUUID;
-    }
+    console.log('Parsed event:', eventData.name, '| UUID:', eventData.eventUUID, '| Classes:', eventData.classes.length);
 
-    // 3. Für jede Klasse die Entries und Results laden
+    // 3. Klassen-Daten laden (nur wenn UUID gefunden)
     const classesWithData = [];
     
-    for (const classInfo of eventData.classes) {
-      try {
-        const classData = await loadClassData(eventData.eventUUID, classInfo);
-        if (classData) {
-          classesWithData.push(classData);
-        }
-      } catch (err) {
-        console.error(`Error loading class ${classInfo.name}:`, err.message);
-      }
+    if (eventData.eventUUID && eventData.classes.length > 0) {
+      // Parallel laden für Geschwindigkeit
+      const classPromises = eventData.classes.slice(0, 10).map(classInfo => 
+        loadClassData(eventData.eventUUID, classInfo).catch(err => {
+          console.log(`Class ${classInfo.name} error:`, err.message);
+          return null;
+        })
+      );
+      
+      const results = await Promise.all(classPromises);
+      classesWithData.push(...results.filter(r => r && (r.entries?.length > 0 || r.results?.length > 0)));
     }
 
-    // 4. Wenn sailNumber angegeben, den spezifischen Teilnehmer finden
+    // 4. Teilnehmer suchen
     let participant = null;
     if (sailNumber) {
-      const normalizedSail = sailNumber.replace(/\s+/g, '').toUpperCase();
-      const sailNumberOnly = sailNumber.replace(/[^0-9]/g, '');
-      
-      for (const classData of classesWithData) {
-        const found = classData.entries?.find(e => {
-          const entrySail = (e.SailNumber || '').replace(/\s+/g, '').toUpperCase();
-          return entrySail.includes(sailNumberOnly) || entrySail === normalizedSail;
-        });
-        
-        if (found) {
-          // Suche Platzierung in Results
-          const result = classData.results?.find(r => 
-            r.SailNumber?.includes(sailNumberOnly)
-          );
-          
-          participant = {
-            sailNumber: found.SailNumber,
-            skipperName: found.SkipperName,
-            crew: found.Crew,
-            club: found.ClubName,
-            boatName: found.BoatName,
-            boatType: found.BoatType,
-            className: classData.className,
-            rank: result?.Rank || null,
-            totalPoints: result?.Total || null,
-            netPoints: result?.Net || null
-          };
-          break;
-        }
-      }
+      participant = findParticipant(classesWithData, sailNumber);
     }
 
-    // 5. Gesamtergebnis zusammenstellen
-    const result = {
+    // 5. Gesamtstatistik
+    const totalParticipants = classesWithData.reduce(
+      (sum, c) => sum + Math.max(c.results?.length || 0, c.entries?.length || 0), 0
+    );
+    
+    const maxRaceCount = Math.max(...classesWithData.map(c => c.raceCount || 0), 0);
+
+    return res.status(200).json({
       success: true,
       event: {
         name: eventData.name,
@@ -114,21 +112,24 @@ export default async function handler(req, res) {
         uuid: eventData.eventUUID,
         date: eventData.date,
         place: eventData.place,
-        club: eventData.club,
-        url: eventUrl
+        url: finalUrl
       },
       classes: classesWithData.map(c => ({
         name: c.className,
         uuid: c.classUUID,
-        totalEntries: c.entries?.length || 0,
-        totalResults: c.results?.length || 0,
+        entries: c.entries?.length || 0,
+        results: c.results?.length || 0,
         raceCount: c.raceCount || 0
       })),
       participant,
-      totalParticipants: classesWithData.reduce((sum, c) => sum + (c.results?.length || c.entries?.length || 0), 0)
-    };
-
-    return res.status(200).json(result);
+      totalParticipants,
+      raceCount: maxRaceCount,
+      debug: {
+        foundUUID: !!eventData.eventUUID,
+        classesInHtml: eventData.classes.length,
+        classesLoaded: classesWithData.length
+      }
+    });
 
   } catch (error) {
     console.error('Get regatta error:', error);
@@ -141,97 +142,108 @@ export default async function handler(req, res) {
 
 function parseEventPage(html, slug) {
   const data = {
-    name: '',
+    name: slug,
     eventUUID: null,
     date: null,
     place: '',
-    club: '',
     classes: []
   };
 
   // Event-Name aus Title
   const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
   if (titleMatch) {
-    data.name = titleMatch[1].replace(' manage2sail', '').trim();
+    data.name = titleMatch[1]
+      .replace(/\s*manage2sail\s*/gi, '')
+      .replace(/\s*-\s*Register to the event.*$/i, '')
+      .replace(/\s*-\s*$/,'')
+      .trim();
   }
 
-  // Event-UUID aus verschiedenen Stellen suchen
-  // Pattern 1: In JavaScript/Data-Attributen
+  // Event-UUID finden - verschiedene Patterns
   const uuidPatterns = [
-    /eventId['":\s]+['"]?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
-    /data-event-id=['"]([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
+    /eventId["']?\s*[:=]\s*["']?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
+    /data-event-id=["']([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
     /\/api\/event\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
-    /event\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i
+    /"eventId":"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"/i,
+    /event\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
   ];
 
   for (const pattern of uuidPatterns) {
     const match = html.match(pattern);
-    if (match) {
+    if (match && match[1]) {
       data.eventUUID = match[1];
       break;
     }
   }
 
-  // Klassen-UUIDs suchen
-  // Pattern: /api/event/{eventUUID}/regattaentry?regattaId={classUUID}
-  // oder: /#!entries?classId={classUUID}
+  // Falls Slug selbst eine UUID ist
+  if (!data.eventUUID && slug.match(/^[0-9a-f]{8}-[0-9a-f]{4}/i)) {
+    data.eventUUID = slug;
+  }
+
+  // Klassen-UUIDs finden
   const classPatterns = [
-    /classId=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})[^>]*>([^<]*)/gi,
-    /regattaId=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi
+    /classId=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi,
+    /regattaId=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi,
+    /"classId":"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"/gi,
   ];
 
-  const foundClasses = new Map();
+  const classUUIDs = new Set();
+  for (const pattern of classPatterns) {
+    let match;
+    while ((match = pattern.exec(html)) !== null) {
+      classUUIDs.add(match[1]);
+    }
+  }
+
+  // Klassennamen extrahieren (falls verfügbar)
+  const classesMap = new Map();
   
-  // Suche nach Klassen-Links
-  const classLinkRegex = /#!(?:entries|results)\?classId=([0-9a-f-]{36})[^>]*>(?:<[^>]+>)*([^<]+)/gi;
+  // Suche nach Klassen-Links mit Namen
+  const classLinkRegex = /href="[^"]*classId=([0-9a-f-]{36})[^"]*"[^>]*>([^<]+)/gi;
   let match;
   while ((match = classLinkRegex.exec(html)) !== null) {
     const uuid = match[1];
     const name = match[2].trim();
-    if (name && !foundClasses.has(uuid)) {
-      foundClasses.set(uuid, { uuid, name });
+    if (name && name.length < 60 && !classesMap.has(uuid)) {
+      classesMap.set(uuid, { uuid, name });
     }
   }
 
-  // Alternative: Aus Tabellen-Rows
-  const tableRowRegex = /<td[^>]*>([^<]+)<\/td>[\s\S]*?classId=([0-9a-f-]{36})/gi;
-  while ((match = tableRowRegex.exec(html)) !== null) {
-    const name = match[1].trim();
-    const uuid = match[2];
-    if (name && !foundClasses.has(uuid)) {
-      foundClasses.set(uuid, { uuid, name });
+  // Verbleibende UUIDs ohne Namen
+  for (const uuid of classUUIDs) {
+    if (!classesMap.has(uuid)) {
+      classesMap.set(uuid, { uuid, name: `Klasse` });
     }
   }
 
-  data.classes = Array.from(foundClasses.values());
+  data.classes = Array.from(classesMap.values());
 
   // Datum extrahieren
-  const dateMatch = html.match(/(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{4})/);
-  if (dateMatch) {
-    data.date = `${dateMatch[3]}-${dateMatch[2].padStart(2, '0')}-${dateMatch[1].padStart(2, '0')}`;
+  const datePatterns = [
+    /(\d{2})\.(\d{2})\.(\d{4})/,
+    /(\d{2})\/(\d{2})\/(\d{4})/,
+    /(\d{4})-(\d{2})-(\d{2})/,
+  ];
+  
+  for (const pattern of datePatterns) {
+    const dateMatch = html.match(pattern);
+    if (dateMatch) {
+      if (pattern.source.startsWith('(\\d{4})')) {
+        // YYYY-MM-DD Format
+        data.date = dateMatch[0];
+      } else {
+        // DD.MM.YYYY oder DD/MM/YYYY
+        data.date = `${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`;
+      }
+      break;
+    }
   }
 
   return data;
 }
 
-function extractUUIDAlternative(html) {
-  // Suche in Script-Tags nach JSON-Daten
-  const scriptMatch = html.match(/var\s+\w+\s*=\s*\{[^}]*['"](Id|UUID)['"]\s*:\s*['"]([0-9a-f-]{36})['"]/i);
-  if (scriptMatch) return scriptMatch[2];
-  
-  // Suche in data-* Attributen
-  const dataMatch = html.match(/data-[^=]*=['"]([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})['"]/i);
-  if (dataMatch) return dataMatch[1];
-  
-  return null;
-}
-
 async function loadClassData(eventUUID, classInfo) {
-  if (!eventUUID) {
-    console.log('No event UUID, skipping API calls');
-    return { className: classInfo.name, classUUID: classInfo.uuid, entries: [], results: [] };
-  }
-
   const result = {
     className: classInfo.name,
     classUUID: classInfo.uuid,
@@ -240,53 +252,93 @@ async function loadClassData(eventUUID, classInfo) {
     raceCount: 0
   };
 
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'de-DE,de;q=0.9'
+  };
+
+  // Entries laden
   try {
-    // Entries laden
     const entriesUrl = `https://www.manage2sail.com/api/event/${eventUUID}/regattaentry?regattaId=${classInfo.uuid}`;
-    console.log('Loading entries:', entriesUrl);
-    
-    const entriesResponse = await fetch(entriesUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json'
-      }
-    });
+    const entriesResponse = await fetch(entriesUrl, { headers });
 
     if (entriesResponse.ok) {
-      const entriesData = await entriesResponse.json();
-      result.entries = entriesData.Entries || [];
-      result.className = entriesData.RegattaName || classInfo.name;
+      const data = await entriesResponse.json();
+      result.entries = data.Entries || data.entries || [];
+      if (data.RegattaName || data.regattaName) {
+        result.className = data.RegattaName || data.regattaName;
+      }
     }
   } catch (err) {
-    console.error('Entries error:', err.message);
+    // Entries optional
   }
 
+  // Results laden
   try {
-    // Results laden
     const resultsUrl = `https://www.manage2sail.com/api/event/${eventUUID}/regattaresult/${classInfo.uuid}`;
-    console.log('Loading results:', resultsUrl);
-    
-    const resultsResponse = await fetch(resultsUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json'
-      }
-    });
+    const resultsResponse = await fetch(resultsUrl, { headers });
 
     if (resultsResponse.ok) {
-      const resultsData = await resultsResponse.json();
-      result.results = resultsData.Results || resultsData.Entries || [];
+      const data = await resultsResponse.json();
+      result.results = data.Results || data.results || data.Entries || [];
       
       // Wettfahrten zählen
-      if (resultsData.Races) {
-        result.raceCount = resultsData.Races.length;
+      if (data.Races || data.races) {
+        result.raceCount = (data.Races || data.races).length;
       } else if (result.results[0]?.RaceResults) {
         result.raceCount = result.results[0].RaceResults.length;
+      } else if (result.results[0]?.raceResults) {
+        result.raceCount = result.results[0].raceResults.length;
       }
     }
   } catch (err) {
-    console.error('Results error:', err.message);
+    // Results optional
   }
 
   return result;
+}
+
+function findParticipant(classesWithData, sailNumber) {
+  // Normalisiere Segelnummer
+  const sailClean = sailNumber.replace(/\s+/g, '').toUpperCase();
+  const sailNumbersOnly = sailNumber.replace(/[^0-9]/g, '');
+  
+  for (const classData of classesWithData) {
+    // Kombiniere Entries und Results
+    const allEntries = [...(classData.entries || []), ...(classData.results || [])];
+    
+    for (const entry of allEntries) {
+      const entrySail = (entry.SailNumber || entry.sailNumber || '').replace(/\s+/g, '').toUpperCase();
+      
+      // Verschiedene Match-Strategien
+      const isMatch = 
+        entrySail === sailClean ||
+        entrySail.endsWith(sailNumbersOnly) ||
+        (sailNumbersOnly.length >= 3 && entrySail.includes(sailNumbersOnly));
+      
+      if (isMatch) {
+        // Finde zugehöriges Result
+        const resultEntry = classData.results?.find(r => {
+          const rSail = (r.SailNumber || r.sailNumber || '').replace(/\s+/g, '');
+          return rSail.includes(sailNumbersOnly);
+        });
+        
+        return {
+          sailNumber: entry.SailNumber || entry.sailNumber,
+          skipperName: entry.SkipperName || entry.skipperName || entry.HelmName || entry.helmName || entry.Name || entry.name,
+          crew: entry.Crew || entry.crew || entry.CrewName || entry.crewName || '',
+          club: entry.ClubName || entry.clubName || entry.Club || entry.club || '',
+          boatName: entry.BoatName || entry.boatName || '',
+          className: classData.className,
+          rank: resultEntry?.Rank || resultEntry?.rank || resultEntry?.Position || resultEntry?.position || entry.Rank || entry.rank,
+          totalPoints: resultEntry?.Total || resultEntry?.total || resultEntry?.TotalPoints,
+          netPoints: resultEntry?.Net || resultEntry?.net || resultEntry?.NetPoints,
+          raceCount: classData.raceCount
+        };
+      }
+    }
+  }
+  
+  return null;
 }
