@@ -13,13 +13,13 @@ const setupPdfWorker = () => {
 setupPdfWorker();
 
 // ============================================
-// THEME CONTEXT (Dark-only)
+// THEME CONTEXT
 // ============================================
 const ThemeContext = createContext();
 
 const useTheme = () => {
-  // Always dark mode
-  return { isDark: true };
+  const context = useContext(ThemeContext);
+  return context || { isDark: true, toggleTheme: () => {} };
 };
 
 // ============================================
@@ -109,13 +109,18 @@ const Icons = {
 // UI KOMPONENTEN (Navy + Gold Theme)
 // ============================================
 const GlassCard = ({ children, className = '', onClick = null }) => {
+  const { isDark } = useTheme();
   return (
     <div
       className={`relative rounded-2xl p-6 ${className} ${onClick ? 'cursor-pointer' : ''}`}
-      style={{
+      style={isDark ? {
         background: 'linear-gradient(135deg, rgba(15,33,64,0.8) 0%, rgba(10,22,40,0.95) 100%)',
         border: '1px solid rgba(212,168,83,0.15)',
         boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
+      } : {
+        background: '#ffffff',
+        border: '1px solid #e2e8f0',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
       }}
       onClick={onClick}
     >
@@ -125,7 +130,8 @@ const GlassCard = ({ children, className = '', onClick = null }) => {
 };
 
 const IconBadge = ({ icon, color = 'gold' }) => {
-  const colors = {
+  const { isDark } = useTheme();
+  const darkColors = {
     gold: 'bg-gold-400/10 text-gold-400 border-gold-400/20',
     purple: 'bg-gold-400/10 text-gold-400 border-gold-400/20',
     cyan: 'bg-sea-300/10 text-sea-300 border-sea-300/20',
@@ -134,6 +140,16 @@ const IconBadge = ({ icon, color = 'gold' }) => {
     red: 'bg-coral/10 text-coral border-coral/20',
     slate: 'bg-navy-700/50 text-cream/70 border-navy-600/30',
   };
+  const lightColors = {
+    gold: 'bg-teal-500/10 text-teal-600 border-teal-500/20',
+    purple: 'bg-teal-500/10 text-teal-600 border-teal-500/20',
+    cyan: 'bg-teal-400/10 text-teal-500 border-teal-400/20',
+    amber: 'bg-teal-400/10 text-teal-500 border-teal-400/20',
+    emerald: 'bg-success/10 text-success border-success/20',
+    red: 'bg-coral/10 text-coral border-coral/20',
+    slate: 'bg-light-border text-light-muted border-light-border',
+  };
+  const colors = isDark ? darkColors : lightColors;
   return (
     <div className={`w-10 h-10 rounded-xl ${colors[color]} border flex items-center justify-center`}>
       {icon}
@@ -142,13 +158,21 @@ const IconBadge = ({ icon, color = 'gold' }) => {
 };
 
 const Toast = ({ message, type = 'info', onClose }) => {
+  const { isDark } = useTheme();
   useEffect(() => { const t = setTimeout(onClose, 5000); return () => clearTimeout(t); }, [onClose]);
-  const colors = {
+  const darkColors = {
     info: 'bg-navy-800 border-navy-600 text-cream',
     success: 'bg-success/20 border-success/50 text-success',
     warning: 'bg-gold-400/20 border-gold-400/50 text-gold-300',
     error: 'bg-coral/20 border-coral/50 text-coral',
   };
+  const lightColors = {
+    info: 'bg-white border-light-border text-light-text',
+    success: 'bg-success/10 border-success/30 text-success',
+    warning: 'bg-teal-500/10 border-teal-500/30 text-teal-600',
+    error: 'bg-coral/10 border-coral/30 text-coral',
+  };
+  const colors = isDark ? darkColors : lightColors;
   const icons = { info: Icons.info, success: Icons.check, warning: Icons.warning, error: Icons.x };
   return (
     <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-xl border ${colors[type]} backdrop-blur-sm shadow-lg animate-slideUp max-w-sm`}>
@@ -163,21 +187,26 @@ const Toast = ({ message, type = 'info', onClose }) => {
 };
 
 const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
+  const { isDark } = useTheme();
   if (!isOpen) return null;
   const sizes = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl' };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className={`absolute inset-0 ${isDark ? 'bg-black/70' : 'bg-black/50'} backdrop-blur-sm`} onClick={onClose} />
       <div
         className={`relative w-full ${sizes[size]} rounded-2xl p-6 max-h-[85vh] overflow-y-auto`}
-        style={{
+        style={isDark ? {
           background: 'linear-gradient(135deg, rgba(15,33,64,0.98) 0%, rgba(10,22,40,0.98) 100%)',
           border: '1px solid rgba(212,168,83,0.2)',
+        } : {
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
         }}
       >
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-semibold text-cream">{title}</h3>
-          <button onClick={onClose} className="text-cream/50 hover:text-cream">{Icons.x}</button>
+          <h3 className={`text-xl font-semibold ${isDark ? 'text-cream' : 'text-light-text'}`}>{title}</h3>
+          <button onClick={onClose} className={isDark ? 'text-cream/50 hover:text-cream' : 'text-light-muted hover:text-light-text'}>{Icons.x}</button>
         </div>
         {children}
       </div>
@@ -187,25 +216,28 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
 
 // Progress Steps
 const ProgressSteps = ({ currentStep, totalSteps, labels }) => {
+  const { isDark } = useTheme();
   return (
     <div className="flex items-center justify-between mb-6">
       {labels.map((label, index) => (
         <div key={index} className="flex items-center flex-1">
           <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium transition-all ${
             index < currentStep
-              ? 'bg-success text-navy-900'
+              ? 'bg-success text-white'
               : index === currentStep
-                ? 'bg-gold-400 text-navy-900'
-                : 'bg-navy-700 text-cream/50'
+                ? isDark ? 'bg-gold-400 text-navy-900' : 'bg-teal-500 text-white'
+                : isDark ? 'bg-navy-700 text-cream/50' : 'bg-light-border text-light-muted'
           }`}>
             {index < currentStep ? Icons.check : index + 1}
           </div>
           <span className={`ml-2 text-sm hidden sm:inline ${
-            index <= currentStep ? 'text-cream' : 'text-cream/40'
+            index <= currentStep
+              ? isDark ? 'text-cream' : 'text-light-text'
+              : isDark ? 'text-cream/40' : 'text-light-muted'
           }`}>{label}</span>
           {index < labels.length - 1 && (
             <div className={`flex-1 h-0.5 mx-3 ${
-              index < currentStep ? 'bg-success' : 'bg-navy-700'
+              index < currentStep ? 'bg-success' : isDark ? 'bg-navy-700' : 'bg-light-border'
             }`} />
           )}
         </div>
@@ -216,23 +248,32 @@ const ProgressSteps = ({ currentStep, totalSteps, labels }) => {
 
 // Stat Card
 const StatCard = ({ icon, label, value, subValue, color = 'gold' }) => {
-  const colors = {
+  const { isDark } = useTheme();
+  const darkColors = {
     gold: 'from-gold-400 to-gold-500',
     purple: 'from-gold-400 to-gold-500',
     emerald: 'from-success to-green-600',
     amber: 'from-gold-300 to-gold-400',
     cyan: 'from-sea-300 to-sea-400',
   };
+  const lightColors = {
+    gold: 'from-teal-500 to-teal-600',
+    purple: 'from-teal-500 to-teal-600',
+    emerald: 'from-success to-green-600',
+    amber: 'from-teal-400 to-teal-500',
+    cyan: 'from-teal-400 to-teal-500',
+  };
+  const colors = isDark ? darkColors : lightColors;
   return (
-    <div className="rounded-xl p-4 bg-navy-800/50 border border-navy-700/50">
+    <div className={`rounded-xl p-4 ${isDark ? 'bg-navy-800/50 border border-navy-700/50' : 'bg-white border border-light-border'}`}>
       <div className="flex items-center gap-3 mb-2">
-        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${colors[color]} flex items-center justify-center text-navy-900`}>
+        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${colors[color]} flex items-center justify-center text-white`}>
           {icon}
         </div>
-        <span className="text-sm text-cream/60">{label}</span>
+        <span className={`text-sm ${isDark ? 'text-cream/60' : 'text-light-muted'}`}>{label}</span>
       </div>
-      <div className="text-2xl font-bold text-sea-300">{value}</div>
-      {subValue && <div className="text-sm text-cream/40">{subValue}</div>}
+      <div className={`text-2xl font-bold ${isDark ? 'text-sea-300' : 'text-teal-600'}`}>{value}</div>
+      {subValue && <div className={`text-sm ${isDark ? 'text-cream/40' : 'text-light-muted'}`}>{subValue}</div>}
     </div>
   );
 };
@@ -470,9 +511,11 @@ function App() {
   // EFFECTS
   // ============================================
   useEffect(() => {
-    localStorage.setItem('tsc-theme', 'dark');
-    document.documentElement.classList.toggle('dark', isDark);
+    localStorage.setItem('tsc-theme', isDark ? 'dark' : 'light');
+    document.body.className = isDark ? 'dark' : 'light';
   }, [isDark]);
+
+  const toggleTheme = () => setIsDark(prev => !prev);
   
   useEffect(() => {
     localStorage.setItem('tsc-boat-data', JSON.stringify(boatData));
@@ -2206,8 +2249,8 @@ function App() {
   // RENDER
   // ============================================
   return (
-    <ThemeContext.Provider value={{ isDark: true }}>
-      <div className="min-h-screen bg-navy-900">
+    <ThemeContext.Provider value={{ isDark, toggleTheme }}>
+      <div className={`min-h-screen ${isDark ? 'bg-navy-900' : 'bg-light-bg'}`}>
         
         {/* Onboarding */}
         <OnboardingModal />
@@ -2217,20 +2260,28 @@ function App() {
         {error && <Toast message={error} type="error" onClose={() => setError(null)} />}
         
         {/* Header */}
-        <nav className="sticky top-0 z-40 border-b bg-navy-900/90 border-gold-400/20 backdrop-blur-xl">
+        <nav className={`sticky top-0 z-40 border-b backdrop-blur-xl ${
+          isDark
+            ? 'bg-navy-900/90 border-gold-400/20'
+            : 'bg-white/90 border-light-border'
+        }`}>
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gold-400 to-gold-500 flex items-center justify-center text-navy-900">
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center ${
+                  isDark
+                    ? 'from-gold-400 to-gold-500 text-navy-900'
+                    : 'from-teal-500 to-teal-600 text-white'
+                }`}>
                   {Icons.boat}
                 </div>
                 <div>
-                  <h1 className="font-bold text-cream">TSC Startgeld</h1>
+                  <h1 className={`font-bold ${isDark ? 'text-cream' : 'text-light-text'}`}>TSC Startgeld</h1>
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="text-cream/50">Saison</span>
+                    <span className={isDark ? 'text-cream/50' : 'text-light-muted'}>Saison</span>
                     <button
                       onClick={() => setShowSeasonModal(true)}
-                      className="font-medium text-gold-400 hover:text-gold-300"
+                      className={`font-medium ${isDark ? 'text-gold-400 hover:text-gold-300' : 'text-teal-600 hover:text-teal-500'}`}
                     >
                       {currentSeason}
                     </button>
@@ -2249,8 +2300,8 @@ function App() {
                   }}
                   className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
                     adminAuthenticated
-                      ? 'bg-gold-400/20 text-gold-400 hover:bg-gold-400/30'
-                      : 'bg-navy-800 text-cream/50 hover:text-cream'
+                      ? isDark ? 'bg-gold-400/20 text-gold-400 hover:bg-gold-400/30' : 'bg-teal-500/20 text-teal-600 hover:bg-teal-500/30'
+                      : isDark ? 'bg-navy-800 text-cream/50 hover:text-cream' : 'bg-light-border text-light-muted hover:text-light-text'
                   }`}
                   title={adminAuthenticated ? "Admin-Bereich" : "Admin-Login"}
                 >
@@ -2258,9 +2309,24 @@ function App() {
                 </button>
                 <button
                   onClick={() => setShowHelpModal(true)}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors bg-navy-800 text-cream/50 hover:text-cream"
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                    isDark
+                      ? 'bg-navy-800 text-cream/50 hover:text-cream'
+                      : 'bg-light-border text-light-muted hover:text-light-text'
+                  }`}
                 >
                   {Icons.info}
+                </button>
+                <button
+                  onClick={toggleTheme}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                    isDark
+                      ? 'bg-navy-800 text-cream/50 hover:text-cream'
+                      : 'bg-light-border text-light-muted hover:text-light-text'
+                  }`}
+                  title={isDark ? 'Light Mode' : 'Dark Mode'}
+                >
+                  {isDark ? Icons.sun : Icons.moon}
                 </button>
               </div>
             </div>
@@ -2269,7 +2335,7 @@ function App() {
 
         {/* Tab Navigation */}
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex gap-1 p-1 rounded-xl bg-navy-800/50">
+          <div className={`flex gap-1 p-1 rounded-xl ${isDark ? 'bg-navy-800/50' : 'bg-light-border/50'}`}>
             {[
               { id: 'dashboard', icon: Icons.grid, label: 'Übersicht' },
               { id: 'add', icon: Icons.plus, label: 'Hinzufügen' },
@@ -2283,8 +2349,12 @@ function App() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                   activeTab === tab.id
-                    ? 'bg-gold-400 text-navy-900 shadow-lg shadow-gold-400/25'
-                    : 'text-cream/60 hover:text-cream hover:bg-navy-700/50'
+                    ? isDark
+                      ? 'bg-gold-400 text-navy-900 shadow-lg shadow-gold-400/25'
+                      : 'bg-teal-500 text-white shadow-lg shadow-teal-500/25'
+                    : isDark
+                      ? 'text-cream/60 hover:text-cream hover:bg-navy-700/50'
+                      : 'text-light-muted hover:text-light-text hover:bg-white/50'
                 }`}
               >
                 <span className="w-4 h-4">{tab.icon}</span>
