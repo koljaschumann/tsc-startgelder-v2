@@ -4480,51 +4480,27 @@ function App() {
         </Modal>
 
         {/* Footer */}
-        <footer className={`border-t px-6 py-8 ${isDark ? 'border-navy-800' : 'border-light-border'}`}>
-          <div className="max-w-6xl mx-auto">
-            {/* Powered By - Kreative Animation */}
-            <div className="flex justify-center mb-6 overflow-hidden">
-              <div className={`relative flex items-center gap-3 px-6 py-3 rounded-2xl ${isDark ? 'bg-navy-800/30' : 'bg-light-border/30'}`}>
-                {/* Sterne */}
-                <span className={`star-twinkle text-xs ${isDark ? 'text-gold-400/60' : 'text-teal-500/60'}`}>✦</span>
-                <span className={`star-twinkle text-[10px] ${isDark ? 'text-gold-300/40' : 'text-teal-400/40'}`}>✦</span>
-
-                {/* Wind */}
-                <span className={`wind-particle text-xs ${isDark ? 'text-cream/30' : 'text-light-muted/50'}`}>～</span>
-                <span className={`wind-particle text-xs ${isDark ? 'text-cream/20' : 'text-light-muted/40'}`}>～</span>
-                <span className={`wind-particle text-xs ${isDark ? 'text-cream/10' : 'text-light-muted/30'}`}>～</span>
-
-                {/* Boot */}
-                <span className={`boat-bob text-lg ${isDark ? 'text-gold-400' : 'text-teal-500'}`}>⛵</span>
-
-                {/* Text */}
-                <span className={`text-sm italic ${isDark ? 'text-cream/40' : 'text-light-muted'}`}>
-                  Navigiert nach den Sternen
-                </span>
-
-                {/* Wellen */}
-                <div className="absolute -bottom-1 left-0 right-0 overflow-hidden h-3 opacity-30">
-                  <span className={`waves text-xs ${isDark ? 'text-sea-300' : 'text-teal-400'}`}>
-                    〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰
-                  </span>
-                </div>
-
-                {/* Sterne rechts */}
-                <span className={`star-twinkle text-[10px] ${isDark ? 'text-gold-300/40' : 'text-teal-400/40'}`}>✦</span>
-                <span className={`star-twinkle text-xs ${isDark ? 'text-gold-400/60' : 'text-teal-500/60'}`}>✦</span>
-              </div>
+        <footer className={`border-t px-6 py-6 ${isDark ? 'border-navy-800' : 'border-light-border'}`}>
+          <div className="max-w-6xl mx-auto flex items-center justify-between text-sm">
+            {/* Copyright */}
+            <div className={`flex items-center gap-2 ${isDark ? 'text-cream/50' : 'text-light-muted'}`}>
+              <span className="w-5 h-5">{Icons.boat}</span>
+              <span>© {new Date().getFullYear()} Tegeler Segel-Club e.V.</span>
             </div>
 
-            {/* Copyright & Links */}
-            <div className="flex items-center justify-between text-sm">
-              <div className={`flex items-center gap-2 ${isDark ? 'text-cream/50' : 'text-light-muted'}`}>
-                <span className="w-5 h-5">{Icons.boat}</span>
-                <span>© {new Date().getFullYear()} Tegeler Segel-Club e.V.</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <a href="https://www.tegeler-segel-club.de" target="_blank" rel="noopener noreferrer" className={`${isDark ? 'text-cream/50 hover:text-cream' : 'text-light-muted hover:text-light-text'} transition-colors`}>Website</a>
-                <a href="mailto:vorstand@tegeler-segel-club.de" className={`${isDark ? 'text-cream/50 hover:text-cream' : 'text-light-muted hover:text-light-text'} transition-colors`}>Kontakt</a>
-              </div>
+            {/* Powered by Westwind */}
+            <div className="flex items-center gap-2">
+              <span className={`wind-particle text-xs ${isDark ? 'text-cream/40' : 'text-light-muted/60'}`}>～</span>
+              <span className={`wind-particle text-xs ${isDark ? 'text-cream/30' : 'text-light-muted/50'}`}>～</span>
+              <span className={`boat-bob ${isDark ? 'text-gold-400/70' : 'text-teal-500/70'}`}>⛵</span>
+              <span className={`italic ${isDark ? 'text-cream/40' : 'text-light-muted'}`}>Powered by Westwind</span>
+              <span className={`star-twinkle text-xs ${isDark ? 'text-gold-400/50' : 'text-teal-500/50'}`}>✦</span>
+            </div>
+
+            {/* Links */}
+            <div className="flex items-center gap-4">
+              <a href="https://www.tegeler-segel-club.de" target="_blank" rel="noopener noreferrer" className={`${isDark ? 'text-cream/50 hover:text-cream' : 'text-light-muted hover:text-light-text'} transition-colors`}>Website</a>
+              <a href="mailto:vorstand@tegeler-segel-club.de" className={`${isDark ? 'text-cream/50 hover:text-cream' : 'text-light-muted hover:text-light-text'} transition-colors`}>Kontakt</a>
             </div>
           </div>
         </footer>
