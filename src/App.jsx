@@ -119,11 +119,11 @@ const Icons = {
 // ============================================
 // UI KOMPONENTEN (Navy + Gold Theme)
 // ============================================
-const GlassCard = ({ children, className = '', onClick = null }) => {
+const GlassCard = ({ children, className = '', onClick = null, shimmer = false }) => {
   const { isDark } = useTheme();
   return (
     <div
-      className={`relative rounded-2xl p-6 ${className} ${onClick ? 'cursor-pointer' : ''}`}
+      className={`relative rounded-2xl p-6 ${className} ${onClick ? 'cursor-pointer' : ''} ${shimmer ? 'shimmer' : ''}`}
       style={isDark ? {
         background: 'linear-gradient(135deg, rgba(15,33,64,0.8) 0%, rgba(10,22,40,0.95) 100%)',
         border: '1px solid rgba(212,168,83,0.15)',
@@ -2799,14 +2799,14 @@ function App() {
           {activeTab === 'dashboard' && (
             <div className="space-y-6 pt-6">
               {/* Hero Card */}
-              <div className={`relative rounded-2xl p-6 md:p-8 overflow-hidden ${
+              <div className={`relative rounded-2xl p-6 md:p-8 overflow-hidden shimmer gradient-flow ${
                 isDark
-                  ? 'bg-gradient-to-br from-gold-400 to-gold-500'
-                  : 'bg-gradient-to-br from-teal-500 to-teal-600'
+                  ? 'bg-gradient-to-br from-gold-400 via-gold-500 to-gold-400'
+                  : 'bg-gradient-to-br from-teal-500 via-teal-600 to-teal-500'
               }`}>
                 {/* Background decoration */}
                 <div className="absolute right-0 top-0 w-1/2 h-full opacity-10">
-                  <svg viewBox="0 0 200 200" className="w-full h-full">
+                  <svg viewBox="0 0 200 200" className="w-full h-full float">
                     <path fill="currentColor" d="M100,10 L180,80 L150,180 L50,180 L20,80 Z" />
                   </svg>
                 </div>
@@ -2823,7 +2823,7 @@ function App() {
 
                     {/* Title */}
                     <h2 className={`text-2xl md:text-3xl font-bold mb-2 ${isDark ? 'text-navy-900' : 'text-white'}`}>
-                      Deine Regatta-Übersicht
+                      <span className="text-shimmer">Deine Regatta-Übersicht</span>
                     </h2>
                     <p className={`mb-6 ${isDark ? 'text-navy-900/70' : 'text-white/80'}`}>
                       Verwalte deine Startgeld-Erstattungen einfach und übersichtlich.
@@ -2850,7 +2850,7 @@ function App() {
                   <div className="flex flex-col gap-3 lg:min-w-[200px]">
                     <button
                       onClick={() => setActiveTab('add')}
-                      className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
+                      className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all shine-sweep ${
                         isDark
                           ? 'bg-white text-navy-900 hover:bg-cream'
                           : 'bg-white text-teal-600 hover:bg-gray-100'
@@ -2861,7 +2861,7 @@ function App() {
                     </button>
                     <button
                       onClick={() => setShowAntragModal(true)}
-                      className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
+                      className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all shine-sweep border-glow border ${
                         isDark
                           ? 'bg-navy-900 text-gold-400 hover:bg-navy-800'
                           : 'bg-teal-700 text-white hover:bg-teal-800'
@@ -2971,14 +2971,14 @@ function App() {
 
                 {/* Segler Profil Sidebar (1/3) */}
                 <div className="space-y-6">
-                  <div className={`rounded-2xl overflow-hidden ${isDark ? 'bg-navy-800/50' : 'bg-white border border-light-border'}`}>
+                  <div className={`rounded-2xl overflow-hidden glow-pulse ${isDark ? 'bg-navy-800/50' : 'bg-white border border-light-border'}`}>
                     {/* Header mit Icon */}
-                    <div className={`h-24 flex items-center justify-center ${
+                    <div className={`h-24 flex items-center justify-center shimmer ${
                       isDark
                         ? 'bg-gradient-to-br from-gold-400/20 to-gold-500/10'
                         : 'bg-gradient-to-br from-teal-500/20 to-teal-600/10'
                     }`}>
-                      <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                      <div className={`w-16 h-16 rounded-full flex items-center justify-center sparkle ${
                         isDark ? 'bg-gold-400/20 text-gold-400' : 'bg-teal-500/20 text-teal-600'
                       }`}>
                         {Icons.boat}
@@ -3970,9 +3970,9 @@ function App() {
               </GlassCard>
 
               {/* Online Einreichen */}
-              <div className={`p-6 rounded-xl border ${isDark ? 'bg-gradient-to-r from-gold-400/20 to-gold-400/10 border-gold-400/30' : 'bg-gradient-to-r from-teal-500/20 to-teal-500/10 border-teal-500/30'}`}>
+              <div className={`p-6 rounded-xl border shimmer border-glow ${isDark ? 'bg-gradient-to-r from-gold-400/20 to-gold-400/10 border-gold-400/30' : 'bg-gradient-to-r from-teal-500/20 to-teal-500/10 border-teal-500/30'}`}>
                 <div className="flex items-center gap-4 mb-5">
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${isDark ? 'bg-gold-400/10 text-gold-400' : 'bg-teal-500/10 text-teal-600'}`}>
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center sparkle ${isDark ? 'bg-gold-400/10 text-gold-400' : 'bg-teal-500/10 text-teal-600'}`}>
                     {Icons.send}
                   </div>
                   <div>
@@ -3985,7 +3985,7 @@ function App() {
                   <button
                     onClick={submitOnline}
                     disabled={regatten.length === 0 || isSubmitting}
-                    className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2 ${isDark ? 'bg-gold-400 text-navy-900 hover:bg-gold-300' : 'bg-teal-500 text-white hover:bg-teal-600'}`}
+                    className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2 shine-sweep ${isDark ? 'bg-gold-400 text-navy-900 hover:bg-gold-300' : 'bg-teal-500 text-white hover:bg-teal-600'}`}
                   >
                     {isSubmitting ? (
                       <><div className="w-5 h-5 animate-spin">{Icons.refresh}</div> Wird gesendet...</>

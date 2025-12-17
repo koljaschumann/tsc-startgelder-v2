@@ -99,3 +99,268 @@ body.light ::selection {
   background-color: rgba(20, 184, 166, 0.3);
   color: #1e293b;
 }
+
+/* ============================================
+   DYNAMISCHE ANIMATIONEN
+   ============================================ */
+
+/* Shimmer-Effekt - Licht gleitet über Element */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(212, 168, 83, 0.08) 25%,
+    rgba(212, 168, 83, 0.15) 50%,
+    rgba(212, 168, 83, 0.08) 75%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 8s ease-in-out infinite;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+body.light .shimmer::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(20, 184, 166, 0.08) 25%,
+    rgba(20, 184, 166, 0.12) 50%,
+    rgba(20, 184, 166, 0.08) 75%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 8s ease-in-out infinite;
+}
+
+/* Glow-Pulse - Sanftes Pulsieren */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(212, 168, 83, 0.1),
+                0 0 40px rgba(212, 168, 83, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(212, 168, 83, 0.2),
+                0 0 60px rgba(212, 168, 83, 0.1);
+  }
+}
+
+body.dark .glow-pulse {
+  animation: glow-pulse 4s ease-in-out infinite;
+}
+
+@keyframes glow-pulse-light {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(20, 184, 166, 0.1),
+                0 0 40px rgba(20, 184, 166, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(20, 184, 166, 0.15),
+                0 0 60px rgba(20, 184, 166, 0.08);
+  }
+}
+
+body.light .glow-pulse {
+  animation: glow-pulse-light 4s ease-in-out infinite;
+}
+
+/* Border-Glow Animation */
+@keyframes border-glow {
+  0%, 100% {
+    border-color: rgba(212, 168, 83, 0.2);
+  }
+  50% {
+    border-color: rgba(212, 168, 83, 0.4);
+  }
+}
+
+body.dark .border-glow {
+  animation: border-glow 3s ease-in-out infinite;
+}
+
+@keyframes border-glow-light {
+  0%, 100% {
+    border-color: rgba(20, 184, 166, 0.2);
+  }
+  50% {
+    border-color: rgba(20, 184, 166, 0.4);
+  }
+}
+
+body.light .border-glow {
+  animation: border-glow-light 3s ease-in-out infinite;
+}
+
+/* Gradient-Flow - Fließender Gradient */
+@keyframes gradient-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.gradient-flow {
+  background-size: 200% 200%;
+  animation: gradient-flow 8s ease infinite;
+}
+
+/* Floating Animation - Sanftes Schweben */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Sparkle - Funkeln für Icons/Badges */
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.sparkle {
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+/* Shine-Sweep - Einzelner Lichtstrahl */
+@keyframes shine-sweep {
+  0% {
+    left: -100%;
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+
+.shine-sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine-sweep::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: skewX(-25deg);
+  animation: shine-sweep 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Pulse-Ring - Pulsierende Ringe */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.pulse-ring {
+  position: relative;
+}
+
+.pulse-ring::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  border: 2px solid currentColor;
+  animation: pulse-ring 2s ease-out infinite;
+  pointer-events: none;
+}
+
+/* Text-Shimmer - Schimmernder Text */
+@keyframes text-shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+body.dark .text-shimmer {
+  background: linear-gradient(
+    90deg,
+    #d4a853 0%,
+    #f0d89a 25%,
+    #d4a853 50%,
+    #c49a47 75%,
+    #d4a853 100%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: text-shimmer 4s linear infinite;
+}
+
+body.light .text-shimmer {
+  background: linear-gradient(
+    90deg,
+    #0d9488 0%,
+    #2dd4bf 25%,
+    #14b8a6 50%,
+    #0d9488 75%,
+    #14b8a6 100%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: text-shimmer 4s linear infinite;
+}
