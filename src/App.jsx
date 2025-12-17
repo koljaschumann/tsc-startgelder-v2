@@ -486,7 +486,10 @@ function App() {
   const [currentPdfData, setCurrentPdfData] = useState(null);
   const [currentInvoiceData, setCurrentInvoiceData] = useState(null);
   const [currentInvoiceAmount, setCurrentInvoiceAmount] = useState('');
-  const [pdfAttachments, setPdfAttachments] = useState([]);
+  const [pdfAttachments, setPdfAttachments] = useState(() => {
+    const saved = localStorage.getItem('tsc-pdf-attachments');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [debugText, setDebugText] = useState('');
   const [parserUsed, setParserUsed] = useState(null);
   const [parsingFeedback, setParsingFeedback] = useState(null);
@@ -537,7 +540,11 @@ function App() {
   useEffect(() => {
     localStorage.setItem('tsc-all-regatten', JSON.stringify(allRegatten));
   }, [allRegatten]);
-  
+
+  useEffect(() => {
+    localStorage.setItem('tsc-pdf-attachments', JSON.stringify(pdfAttachments));
+  }, [pdfAttachments]);
+
   useEffect(() => {
     localStorage.setItem('tsc-current-season', currentSeason);
   }, [currentSeason]);
