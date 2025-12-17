@@ -1960,27 +1960,34 @@ function App() {
       const overviewPages = await finalPdf.copyPages(overviewDoc, overviewDoc.getPageIndices());
       overviewPages.forEach(page => finalPdf.addPage(page));
 
-      // Für jede Regatta: Ergebnisliste und Rechnung anhängen
+      // Für jede Regatta: Ergebnisliste und Rechnung aus pdfAttachments anhängen
       for (const regatta of sortedRegatten) {
-        // Ergebnisliste anhängen
-        if (regatta.resultPdfData) {
-          try {
-            const resultPdf = await PDFDocument.load(regatta.resultPdfData);
-            const resultPages = await finalPdf.copyPages(resultPdf, resultPdf.getPageIndices());
-            resultPages.forEach(page => finalPdf.addPage(page));
-          } catch (e) {
-            console.log('Konnte Ergebnisliste nicht anhängen:', regatta.regattaName, e);
-          }
-        }
+        // PDF-Anhang für diese Regatta finden
+        const attachment = pdfAttachments.find(att => att.regattaId === regatta.id);
 
-        // Rechnung anhängen
-        if (regatta.invoicePdfData) {
-          try {
-            const invoicePdf = await PDFDocument.load(regatta.invoicePdfData);
-            const invoicePages = await finalPdf.copyPages(invoicePdf, invoicePdf.getPageIndices());
-            invoicePages.forEach(page => finalPdf.addPage(page));
-          } catch (e) {
-            console.log('Konnte Rechnung nicht anhängen:', regatta.regattaName, e);
+        if (attachment) {
+          // Ergebnisliste anhängen
+          if (attachment.resultPdf) {
+            try {
+              const resultBytes = Uint8Array.from(atob(attachment.resultPdf), c => c.charCodeAt(0));
+              const resultPdf = await PDFDocument.load(resultBytes);
+              const resultPages = await finalPdf.copyPages(resultPdf, resultPdf.getPageIndices());
+              resultPages.forEach(page => finalPdf.addPage(page));
+            } catch (e) {
+              console.log('Konnte Ergebnisliste nicht anhängen:', regatta.regattaName, e);
+            }
+          }
+
+          // Rechnung anhängen
+          if (attachment.invoicePdf) {
+            try {
+              const invoiceBytes = Uint8Array.from(atob(attachment.invoicePdf), c => c.charCodeAt(0));
+              const invoicePdf = await PDFDocument.load(invoiceBytes);
+              const invoicePages = await finalPdf.copyPages(invoicePdf, invoicePdf.getPageIndices());
+              invoicePages.forEach(page => finalPdf.addPage(page));
+            } catch (e) {
+              console.log('Konnte Rechnung nicht anhängen:', regatta.regattaName, e);
+            }
           }
         }
       }
@@ -2207,23 +2214,30 @@ function App() {
       const overviewPages = await finalPdf.copyPages(overviewDoc, overviewDoc.getPageIndices());
       overviewPages.forEach(page => finalPdf.addPage(page));
 
+      // Für jede Regatta: Ergebnisliste und Rechnung aus pdfAttachments anhängen
       for (const regatta of sortedRegatten) {
-        if (regatta.resultPdfData) {
-          try {
-            const resultPdf = await PDFDocument.load(regatta.resultPdfData);
-            const resultPages = await finalPdf.copyPages(resultPdf, resultPdf.getPageIndices());
-            resultPages.forEach(page => finalPdf.addPage(page));
-          } catch (e) {
-            console.log('Konnte Ergebnisliste nicht anhängen:', regatta.regattaName, e);
+        const attachment = pdfAttachments.find(att => att.regattaId === regatta.id);
+
+        if (attachment) {
+          if (attachment.resultPdf) {
+            try {
+              const resultBytes = Uint8Array.from(atob(attachment.resultPdf), c => c.charCodeAt(0));
+              const resultPdf = await PDFDocument.load(resultBytes);
+              const resultPages = await finalPdf.copyPages(resultPdf, resultPdf.getPageIndices());
+              resultPages.forEach(page => finalPdf.addPage(page));
+            } catch (e) {
+              console.log('Konnte Ergebnisliste nicht anhängen:', regatta.regattaName, e);
+            }
           }
-        }
-        if (regatta.invoicePdfData) {
-          try {
-            const invoicePdf = await PDFDocument.load(regatta.invoicePdfData);
-            const invoicePages = await finalPdf.copyPages(invoicePdf, invoicePdf.getPageIndices());
-            invoicePages.forEach(page => finalPdf.addPage(page));
-          } catch (e) {
-            console.log('Konnte Rechnung nicht anhängen:', regatta.regattaName, e);
+          if (attachment.invoicePdf) {
+            try {
+              const invoiceBytes = Uint8Array.from(atob(attachment.invoicePdf), c => c.charCodeAt(0));
+              const invoicePdf = await PDFDocument.load(invoiceBytes);
+              const invoicePages = await finalPdf.copyPages(invoicePdf, invoicePdf.getPageIndices());
+              invoicePages.forEach(page => finalPdf.addPage(page));
+            } catch (e) {
+              console.log('Konnte Rechnung nicht anhängen:', regatta.regattaName, e);
+            }
           }
         }
       }
