@@ -3794,7 +3794,7 @@ function App() {
             <GlassCard>
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <IconBadge icon={Icons.list} color="emerald" />
+                  <IconBadge icon={Icons.list} color="gold" />
                   <div>
                     <h2 className={`text-lg font-semibold ${'text-cream'}`}>Regatten {currentSeason}</h2>
                     <p className={`text-sm ${'text-cream/60'}`}>{regatten.length} Einträge • {totalAmount.toFixed(2)} € gesamt</p>
@@ -3835,7 +3835,7 @@ function App() {
                           </div>
                         </div>
                         <div className="flex items-center gap-3 flex-shrink-0 ml-3">
-                          <span className={`text-lg font-semibold text-success`}>{r.invoiceAmount?.toFixed(2)} €</span>
+                          <span className={`text-lg font-semibold ${isDark ? 'text-gold-400' : 'text-teal-600'}`}>{r.invoiceAmount?.toFixed(2)} €</span>
                           <button
                             onClick={() => startEditRegatta(r)}
                             className={`w-8 h-8 rounded-lg bg-gold-400/10 text-gold-400 hover:bg-gold-300/20 flex items-center justify-center`}
@@ -3919,73 +3919,73 @@ function App() {
             <div className="space-y-6">
               <GlassCard>
                 <div className="flex items-center gap-3 mb-6">
-                  <IconBadge icon={Icons.download} color="emerald" />
+                  <IconBadge icon={Icons.download} color="gold" />
                   <div>
-                    <h2 className={`text-lg font-semibold ${'text-cream'}`}>Export & Einreichen</h2>
-                    <p className={`text-sm ${'text-cream/60'}`}>Saison {currentSeason} • {regatten.length} Regatten • {totalAmount.toFixed(2)} €</p>
+                    <h2 className={`text-lg font-semibold ${isDark ? 'text-cream' : 'text-light-text'}`}>Export & Einreichen</h2>
+                    <p className={`text-sm ${isDark ? 'text-cream/60' : 'text-light-muted'}`}>Saison {currentSeason} • {regatten.length} Regatten • {totalAmount.toFixed(2)} €</p>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                   <button
                     onClick={generatePDF}
                     disabled={regatten.length === 0}
-                    className={`group p-4 rounded-xl text-left transition-all disabled:opacity-50 ${'bg-navy-800/50 hover:bg-navy-700/50'}`}
+                    className={`group p-4 rounded-xl text-left transition-all disabled:opacity-50 ${isDark ? 'bg-navy-800/50 hover:bg-navy-700/50' : 'bg-light-border/30 hover:bg-light-border/50'}`}
                   >
-                    <div className="w-10 h-10 rounded-lg bg-gold-400/10 flex items-center justify-center text-gold-400 mb-2">{Icons.document}</div>
-                    <div className={`font-medium ${'text-cream'}`}>PDF-Antrag</div>
-                    <div className={`text-sm ${'text-cream/50'}`}>Erstattungsformular</div>
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 ${isDark ? 'bg-gold-400/10 text-gold-400' : 'bg-teal-500/10 text-teal-600'}`}>{Icons.document}</div>
+                    <div className={`font-medium ${isDark ? 'text-cream' : 'text-light-text'}`}>PDF-Antrag</div>
+                    <div className={`text-sm ${isDark ? 'text-cream/50' : 'text-light-muted'}`}>Erstattungsformular</div>
                   </button>
-                  
+
                   <button
                     onClick={generateCSV}
                     disabled={regatten.length === 0}
-                    className={`group p-4 rounded-xl text-left transition-all disabled:opacity-50 ${'bg-navy-800/50 hover:bg-navy-700/50'}`}
+                    className={`group p-4 rounded-xl text-left transition-all disabled:opacity-50 ${isDark ? 'bg-navy-800/50 hover:bg-navy-700/50' : 'bg-light-border/30 hover:bg-light-border/50'}`}
                   >
-                    <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center text-emerald-500 mb-2">{Icons.table}</div>
-                    <div className={`font-medium ${'text-cream'}`}>CSV-Export</div>
-                    <div className={`text-sm ${'text-cream/50'}`}>Buchungssatz</div>
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 ${isDark ? 'bg-sea-300/10 text-sea-300' : 'bg-teal-400/10 text-teal-500'}`}>{Icons.table}</div>
+                    <div className={`font-medium ${isDark ? 'text-cream' : 'text-light-text'}`}>CSV-Export</div>
+                    <div className={`text-sm ${isDark ? 'text-cream/50' : 'text-light-muted'}`}>Buchungssatz</div>
                   </button>
-                  
+
                   <button
                     onClick={generateSEPA}
                     disabled={regatten.length === 0}
-                    className={`group p-4 rounded-xl text-left transition-all disabled:opacity-50 ${'bg-navy-800/50 hover:bg-navy-700/50'}`}
+                    className={`group p-4 rounded-xl text-left transition-all disabled:opacity-50 ${isDark ? 'bg-navy-800/50 hover:bg-navy-700/50' : 'bg-light-border/30 hover:bg-light-border/50'}`}
                   >
-                    <div className="w-10 h-10 rounded-lg bg-sea-300/10 flex items-center justify-center text-cyan-500 mb-2">{Icons.bank}</div>
-                    <div className={`font-medium ${'text-cream'}`}>SEPA-XML</div>
-                    <div className={`text-sm ${'text-cream/50'}`}>Überweisung</div>
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 ${isDark ? 'bg-sea-300/10 text-sea-300' : 'bg-teal-400/10 text-teal-500'}`}>{Icons.bank}</div>
+                    <div className={`font-medium ${isDark ? 'text-cream' : 'text-light-text'}`}>SEPA-XML</div>
+                    <div className={`text-sm ${isDark ? 'text-cream/50' : 'text-light-muted'}`}>Überweisung</div>
                   </button>
-                  
+
                   <button
                     onClick={downloadAllDocuments}
                     disabled={regatten.length === 0}
-                    className={`group p-4 rounded-xl text-left transition-all disabled:opacity-50 ${'bg-navy-800/50 hover:bg-navy-700/50'}`}
+                    className={`group p-4 rounded-xl text-left transition-all disabled:opacity-50 ${isDark ? 'bg-navy-800/50 hover:bg-navy-700/50' : 'bg-light-border/30 hover:bg-light-border/50'}`}
                   >
-                    <div className="w-10 h-10 rounded-lg bg-gold-400/10 flex items-center justify-center text-amber-500 mb-2">{Icons.archive}</div>
-                    <div className={`font-medium ${'text-cream'}`}>Alle Dateien</div>
-                    <div className={`text-sm ${'text-cream/50'}`}>Inkl. Belege</div>
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 ${isDark ? 'bg-gold-400/10 text-gold-400' : 'bg-teal-500/10 text-teal-600'}`}>{Icons.archive}</div>
+                    <div className={`font-medium ${isDark ? 'text-cream' : 'text-light-text'}`}>Alle Dateien</div>
+                    <div className={`text-sm ${isDark ? 'text-cream/50' : 'text-light-muted'}`}>Inkl. Belege</div>
                   </button>
                 </div>
               </GlassCard>
-              
+
               {/* Online Einreichen */}
-              <div className={`p-6 rounded-xl bg-gradient-to-r from-success/20 to-success/10 border border-success/30`}>
+              <div className={`p-6 rounded-xl border ${isDark ? 'bg-gradient-to-r from-gold-400/20 to-gold-400/10 border-gold-400/30' : 'bg-gradient-to-r from-teal-500/20 to-teal-500/10 border-teal-500/30'}`}>
                 <div className="flex items-center gap-4 mb-5">
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center bg-success/10 text-success`}>
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${isDark ? 'bg-gold-400/10 text-gold-400' : 'bg-teal-500/10 text-teal-600'}`}>
                     {Icons.send}
                   </div>
                   <div>
-                    <div className={`font-semibold text-lg ${'text-cream'}`}>Online einreichen</div>
-                    <div className={`text-sm ${'text-cream/60'}`}>Direkt an den TSC senden</div>
+                    <div className={`font-semibold text-lg ${isDark ? 'text-cream' : 'text-light-text'}`}>Online einreichen</div>
+                    <div className={`text-sm ${isDark ? 'text-cream/60' : 'text-light-muted'}`}>Direkt an den TSC senden</div>
                   </div>
                 </div>
-                
+
                 <div className="flex gap-4">
                   <button
                     onClick={submitOnline}
                     disabled={regatten.length === 0 || isSubmitting}
-                    className="flex-1 py-3 px-6 rounded-xl bg-emerald-600 hover:bg-success text-cream font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2 ${isDark ? 'bg-gold-400 text-navy-900 hover:bg-gold-300' : 'bg-teal-500 text-white hover:bg-teal-600'}`}
                   >
                     {isSubmitting ? (
                       <><div className="w-5 h-5 animate-spin">{Icons.refresh}</div> Wird gesendet...</>
@@ -3996,7 +3996,7 @@ function App() {
                   <button
                     onClick={downloadAllDocuments}
                     disabled={regatten.length === 0}
-                    className={`py-3 px-6 rounded-xl font-medium transition-all disabled:opacity-50 flex items-center gap-2 bg-navy-700 text-cream hover:bg-navy-600`}
+                    className={`py-3 px-6 rounded-xl font-medium transition-all disabled:opacity-50 flex items-center gap-2 ${isDark ? 'bg-navy-700 text-cream hover:bg-navy-600' : 'bg-light-border text-light-text hover:bg-gray-200'}`}
                   >
                     {Icons.mail} Per E-Mail
                   </button>
