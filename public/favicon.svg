@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Background circle -->
+  <circle cx="16" cy="16" r="15" fill="#0a1628"/>
+
+  <!-- Water/waves -->
+  <path d="M4 22 Q8 20 12 22 Q16 24 20 22 Q24 20 28 22 L28 28 Q24 26 20 28 Q16 30 12 28 Q8 26 4 28 Z" fill="#5aa3b9" opacity="0.6"/>
+
+  <!-- Boat hull -->
+  <path d="M8 20 L24 20 L22 24 L10 24 Z" fill="#d4a853"/>
+
+  <!-- Mast -->
+  <rect x="15" y="8" width="2" height="13" fill="#d4a853"/>
+
+  <!-- Sail -->
+  <path d="M17 9 L17 19 L25 19 Z" fill="#faf8f5" opacity="0.9"/>
+  <path d="M15 9 L15 17 L9 17 Z" fill="#faf8f5" opacity="0.7"/>
+
+  <!-- Flag -->
+  <path d="M16 6 L16 9 L20 7.5 Z" fill="#d4a853"/>
+</svg>

@@ -4481,26 +4481,28 @@ function App() {
 
         {/* Footer */}
         <footer className={`border-t px-6 py-6 ${isDark ? 'border-navy-800' : 'border-light-border'}`}>
-          <div className="max-w-6xl mx-auto flex items-center justify-between text-sm">
-            {/* Copyright */}
-            <div className={`flex items-center gap-2 ${isDark ? 'text-cream/50' : 'text-light-muted'}`}>
-              <span className="w-5 h-5">{Icons.boat}</span>
-              <span>© {new Date().getFullYear()} Tegeler Segel-Club e.V.</span>
-            </div>
+          <div className="max-w-6xl mx-auto">
+            {/* Mobile: Zentriert gestapelt, Desktop: Eine Zeile */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm">
+              {/* Copyright */}
+              <div className={`flex items-center gap-2 ${isDark ? 'text-cream/50' : 'text-light-muted'}`}>
+                <span className="w-5 h-5">{Icons.boat}</span>
+                <span>© {new Date().getFullYear()} TSC e.V.</span>
+              </div>
 
-            {/* Powered by Westwind */}
-            <div className="flex items-center gap-2">
-              <span className={`wind-particle text-xs ${isDark ? 'text-cream/40' : 'text-light-muted/60'}`}>～</span>
-              <span className={`wind-particle text-xs ${isDark ? 'text-cream/30' : 'text-light-muted/50'}`}>～</span>
-              <span className={`boat-bob ${isDark ? 'text-gold-400/70' : 'text-teal-500/70'}`}>⛵</span>
-              <span className={`italic ${isDark ? 'text-cream/40' : 'text-light-muted'}`}>Powered by Westwind</span>
-              <span className={`star-twinkle text-xs ${isDark ? 'text-gold-400/50' : 'text-teal-500/50'}`}>✦</span>
-            </div>
+              {/* Powered by Westwind - Mittig */}
+              <div className="flex items-center gap-2 order-first md:order-none">
+                <span className={`wind-particle text-xs ${isDark ? 'text-cream/40' : 'text-light-muted/60'}`}>～</span>
+                <span className={`boat-bob ${isDark ? 'text-gold-400/70' : 'text-teal-500/70'}`}>⛵</span>
+                <span className={`italic ${isDark ? 'text-cream/40' : 'text-light-muted'}`}>Powered by Westwind</span>
+                <span className={`star-twinkle text-xs ${isDark ? 'text-gold-400/50' : 'text-teal-500/50'}`}>✦</span>
+              </div>
 
-            {/* Links */}
-            <div className="flex items-center gap-4">
-              <a href="https://www.tegeler-segel-club.de" target="_blank" rel="noopener noreferrer" className={`${isDark ? 'text-cream/50 hover:text-cream' : 'text-light-muted hover:text-light-text'} transition-colors`}>Website</a>
-              <a href="mailto:vorstand@tegeler-segel-club.de" className={`${isDark ? 'text-cream/50 hover:text-cream' : 'text-light-muted hover:text-light-text'} transition-colors`}>Kontakt</a>
+              {/* Links */}
+              <div className="flex items-center gap-4">
+                <a href="https://www.tegeler-segel-club.de" target="_blank" rel="noopener noreferrer" className={`${isDark ? 'text-cream/50 hover:text-cream' : 'text-light-muted hover:text-light-text'} transition-colors`}>Website</a>
+                <a href="mailto:vorstand@tegeler-segel-club.de" className={`${isDark ? 'text-cream/50 hover:text-cream' : 'text-light-muted hover:text-light-text'} transition-colors`}>Kontakt</a>
+              </div>
             </div>
           </div>
         </footer>
