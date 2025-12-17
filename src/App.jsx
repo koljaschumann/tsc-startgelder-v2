@@ -13,14 +13,13 @@ const setupPdfWorker = () => {
 setupPdfWorker();
 
 // ============================================
-// THEME CONTEXT
+// THEME CONTEXT (Dark-only)
 // ============================================
 const ThemeContext = createContext();
 
 const useTheme = () => {
-  const context = useContext(ThemeContext);
-  if (!context) throw new Error('useTheme must be used within ThemeProvider');
-  return context;
+  // Always dark mode
+  return { isDark: true };
 };
 
 // ============================================
@@ -107,19 +106,16 @@ const Icons = {
 };
 
 // ============================================
-// THEME-AWARE UI KOMPONENTEN
+// UI KOMPONENTEN (Navy + Gold Theme)
 // ============================================
 const GlassCard = ({ children, className = '', onClick = null }) => {
-  const { isDark } = useTheme();
   return (
-    <div 
+    <div
       className={`relative rounded-2xl p-6 ${className} ${onClick ? 'cursor-pointer' : ''}`}
       style={{
-        background: isDark 
-          ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
-          : 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
-        border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.1)',
-        boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.2)' : '0 4px 24px rgba(0,0,0,0.08)',
+        background: 'linear-gradient(135deg, rgba(15,33,64,0.8) 0%, rgba(10,22,40,0.95) 100%)',
+        border: '1px solid rgba(212,168,83,0.15)',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
       }}
       onClick={onClick}
     >
@@ -128,15 +124,15 @@ const GlassCard = ({ children, className = '', onClick = null }) => {
   );
 };
 
-const IconBadge = ({ icon, color = 'slate' }) => {
-  const { isDark } = useTheme();
+const IconBadge = ({ icon, color = 'gold' }) => {
   const colors = {
-    purple: isDark ? 'bg-violet-500/10 text-violet-400 border-violet-500/20' : 'bg-violet-100 text-violet-600 border-violet-200',
-    cyan: isDark ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' : 'bg-cyan-100 text-cyan-600 border-cyan-200',
-    amber: isDark ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-amber-100 text-amber-600 border-amber-200',
-    emerald: isDark ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-emerald-100 text-emerald-600 border-emerald-200',
-    red: isDark ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-red-100 text-red-600 border-red-200',
-    slate: isDark ? 'bg-slate-500/10 text-slate-400 border-slate-500/20' : 'bg-slate-100 text-slate-600 border-slate-200',
+    gold: 'bg-gold-400/10 text-gold-400 border-gold-400/20',
+    purple: 'bg-gold-400/10 text-gold-400 border-gold-400/20',
+    cyan: 'bg-sea-300/10 text-sea-300 border-sea-300/20',
+    amber: 'bg-gold-300/10 text-gold-300 border-gold-300/20',
+    emerald: 'bg-success/10 text-success border-success/20',
+    red: 'bg-coral/10 text-coral border-coral/20',
+    slate: 'bg-navy-700/50 text-cream/70 border-navy-600/30',
   };
   return (
     <div className={`w-10 h-10 rounded-xl ${colors[color]} border flex items-center justify-center`}>
@@ -146,13 +142,12 @@ const IconBadge = ({ icon, color = 'slate' }) => {
 };
 
 const Toast = ({ message, type = 'info', onClose }) => {
-  const { isDark } = useTheme();
   useEffect(() => { const t = setTimeout(onClose, 5000); return () => clearTimeout(t); }, [onClose]);
   const colors = {
-    info: isDark ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-800',
-    success: isDark ? 'bg-emerald-900/80 border-emerald-700 text-emerald-200' : 'bg-emerald-100 border-emerald-200 text-emerald-800',
-    warning: isDark ? 'bg-amber-900/80 border-amber-700 text-amber-200' : 'bg-amber-100 border-amber-200 text-amber-800',
-    error: isDark ? 'bg-red-900/80 border-red-700 text-red-200' : 'bg-red-100 border-red-200 text-red-800',
+    info: 'bg-navy-800 border-navy-600 text-cream',
+    success: 'bg-success/20 border-success/50 text-success',
+    warning: 'bg-gold-400/20 border-gold-400/50 text-gold-300',
+    error: 'bg-coral/20 border-coral/50 text-coral',
   };
   const icons = { info: Icons.info, success: Icons.check, warning: Icons.warning, error: Icons.x };
   return (
@@ -168,24 +163,21 @@ const Toast = ({ message, type = 'info', onClose }) => {
 };
 
 const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
-  const { isDark } = useTheme();
   if (!isOpen) return null;
   const sizes = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl' };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div 
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div
         className={`relative w-full ${sizes[size]} rounded-2xl p-6 max-h-[85vh] overflow-y-auto`}
-        style={{ 
-          background: isDark 
-            ? 'linear-gradient(135deg, rgba(30,41,59,0.98) 0%, rgba(15,23,42,0.98) 100%)'
-            : 'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%)',
-          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
+        style={{
+          background: 'linear-gradient(135deg, rgba(15,33,64,0.98) 0%, rgba(10,22,40,0.98) 100%)',
+          border: '1px solid rgba(212,168,83,0.2)',
         }}
       >
         <div className="flex items-center justify-between mb-6">
-          <h3 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{title}</h3>
-          <button onClick={onClose} className={`${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}>{Icons.x}</button>
+          <h3 className="text-xl font-semibold text-cream">{title}</h3>
+          <button onClick={onClose} className="text-cream/50 hover:text-cream">{Icons.x}</button>
         </div>
         {children}
       </div>
@@ -195,30 +187,25 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
 
 // Progress Steps
 const ProgressSteps = ({ currentStep, totalSteps, labels }) => {
-  const { isDark } = useTheme();
   return (
     <div className="flex items-center justify-between mb-6">
       {labels.map((label, index) => (
         <div key={index} className="flex items-center flex-1">
           <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium transition-all ${
-            index < currentStep 
-              ? 'bg-emerald-500 text-white' 
-              : index === currentStep 
-                ? 'bg-violet-500 text-white' 
-                : isDark ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-500'
+            index < currentStep
+              ? 'bg-success text-navy-900'
+              : index === currentStep
+                ? 'bg-gold-400 text-navy-900'
+                : 'bg-navy-700 text-cream/50'
           }`}>
             {index < currentStep ? Icons.check : index + 1}
           </div>
           <span className={`ml-2 text-sm hidden sm:inline ${
-            index <= currentStep 
-              ? isDark ? 'text-white' : 'text-slate-900'
-              : isDark ? 'text-slate-500' : 'text-slate-400'
+            index <= currentStep ? 'text-cream' : 'text-cream/40'
           }`}>{label}</span>
           {index < labels.length - 1 && (
             <div className={`flex-1 h-0.5 mx-3 ${
-              index < currentStep 
-                ? 'bg-emerald-500' 
-                : isDark ? 'bg-slate-700' : 'bg-slate-200'
+              index < currentStep ? 'bg-success' : 'bg-navy-700'
             }`} />
           )}
         </div>
@@ -228,24 +215,24 @@ const ProgressSteps = ({ currentStep, totalSteps, labels }) => {
 };
 
 // Stat Card
-const StatCard = ({ icon, label, value, subValue, color = 'purple' }) => {
-  const { isDark } = useTheme();
+const StatCard = ({ icon, label, value, subValue, color = 'gold' }) => {
   const colors = {
-    purple: 'from-violet-500 to-violet-600',
-    emerald: 'from-emerald-500 to-emerald-600',
-    amber: 'from-amber-500 to-amber-600',
-    cyan: 'from-cyan-500 to-cyan-600',
+    gold: 'from-gold-400 to-gold-500',
+    purple: 'from-gold-400 to-gold-500',
+    emerald: 'from-success to-green-600',
+    amber: 'from-gold-300 to-gold-400',
+    cyan: 'from-sea-300 to-sea-400',
   };
   return (
-    <div className={`rounded-xl p-4 ${isDark ? 'bg-slate-800/50 border border-slate-700/50' : 'bg-white border border-slate-200'}`}>
+    <div className="rounded-xl p-4 bg-navy-800/50 border border-navy-700/50">
       <div className="flex items-center gap-3 mb-2">
-        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${colors[color]} flex items-center justify-center text-white`}>
+        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${colors[color]} flex items-center justify-center text-navy-900`}>
           {icon}
         </div>
-        <span className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{label}</span>
+        <span className="text-sm text-cream/60">{label}</span>
       </div>
-      <div className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{value}</div>
-      {subValue && <div className={`text-sm ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{subValue}</div>}
+      <div className="text-2xl font-bold text-sea-300">{value}</div>
+      {subValue && <div className="text-sm text-cream/40">{subValue}</div>}
     </div>
   );
 };
@@ -483,7 +470,7 @@ function App() {
   // EFFECTS
   // ============================================
   useEffect(() => {
-    localStorage.setItem('tsc-theme', isDark ? 'dark' : 'light');
+    localStorage.setItem('tsc-theme', 'dark');
     document.documentElement.classList.toggle('dark', isDark);
   }, [isDark]);
   
@@ -2169,21 +2156,21 @@ function App() {
     return (
       <Modal isOpen={showOnboarding} onClose={() => {}} title="" size="md">
         <div className="text-center">
-          <div className={`w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center text-white`}>
+          <div className={`w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center text-cream`}>
             <span className="w-8 h-8">{steps[onboardingStep].icon}</span>
           </div>
           
-          <h2 className={`text-2xl font-bold mb-4 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          <h2 className={`text-2xl font-bold mb-4 ${'text-cream'}`}>
             {steps[onboardingStep].title}
           </h2>
           
-          <p className={`mb-8 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+          <p className={`mb-8 ${'text-cream/60'}`}>
             {steps[onboardingStep].content}
           </p>
           
           <div className="flex justify-center gap-2 mb-6">
             {steps.map((_, i) => (
-              <div key={i} className={`w-2 h-2 rounded-full ${i === onboardingStep ? 'bg-violet-500' : isDark ? 'bg-slate-700' : 'bg-slate-300'}`} />
+              <div key={i} className={`w-2 h-2 rounded-full ${i === onboardingStep ? 'bg-gold-400' : 'bg-navy-700'}`} />
             ))}
           </div>
           
@@ -2191,7 +2178,7 @@ function App() {
             {onboardingStep > 0 && (
               <button
                 onClick={() => setOnboardingStep(s => s - 1)}
-                className={`px-6 py-2 rounded-xl ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-slate-200 text-slate-800 hover:bg-slate-300'}`}
+                className={`px-6 py-2 rounded-xl bg-navy-700 text-cream hover:bg-navy-600`}
               >
                 Zurück
               </button>
@@ -2205,7 +2192,7 @@ function App() {
                   localStorage.setItem('tsc-onboarding-done', 'true');
                 }
               }}
-              className="px-6 py-2 rounded-xl bg-violet-600 text-white hover:bg-violet-500"
+              className="px-6 py-2 rounded-xl bg-gold-400 text-cream hover:bg-gold-300"
             >
               {onboardingStep < steps.length - 1 ? 'Weiter' : 'Los geht\'s'}
             </button>
@@ -2219,8 +2206,8 @@ function App() {
   // RENDER
   // ============================================
   return (
-    <ThemeContext.Provider value={{ isDark, setIsDark }}>
-      <div className={`min-h-screen transition-colors ${isDark ? 'bg-slate-900' : 'bg-slate-50'}`}>
+    <ThemeContext.Provider value={{ isDark: true }}>
+      <div className="min-h-screen bg-navy-900">
         
         {/* Onboarding */}
         <OnboardingModal />
@@ -2230,27 +2217,27 @@ function App() {
         {error && <Toast message={error} type="error" onClose={() => setError(null)} />}
         
         {/* Header */}
-        <nav className={`sticky top-0 z-40 border-b ${isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white/80 border-slate-200'} backdrop-blur-xl`}>
+        <nav className="sticky top-0 z-40 border-b bg-navy-900/90 border-gold-400/20 backdrop-blur-xl">
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center text-white">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gold-400 to-gold-500 flex items-center justify-center text-navy-900">
                   {Icons.boat}
                 </div>
                 <div>
-                  <h1 className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>TSC Startgeld</h1>
+                  <h1 className="font-bold text-cream">TSC Startgeld</h1>
                   <div className="flex items-center gap-2 text-xs">
-                    <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>Saison</span>
-                    <button 
+                    <span className="text-cream/50">Saison</span>
+                    <button
                       onClick={() => setShowSeasonModal(true)}
-                      className={`font-medium ${isDark ? 'text-violet-400 hover:text-violet-300' : 'text-violet-600 hover:text-violet-500'}`}
+                      className="font-medium text-gold-400 hover:text-gold-300"
                     >
                       {currentSeason}
                     </button>
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
@@ -2261,23 +2248,17 @@ function App() {
                     }
                   }}
                   className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                    adminAuthenticated 
-                      ? 'bg-amber-500/20 text-amber-500 hover:bg-amber-500/30' 
-                      : isDark ? 'bg-slate-800 text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                    adminAuthenticated
+                      ? 'bg-gold-400/20 text-gold-400 hover:bg-gold-400/30'
+                      : 'bg-navy-800 text-cream/50 hover:text-cream'
                   }`}
                   title={adminAuthenticated ? "Admin-Bereich" : "Admin-Login"}
                 >
                   {adminAuthenticated ? Icons.settings : Icons.lock}
                 </button>
                 <button
-                  onClick={() => setIsDark(!isDark)}
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isDark ? 'bg-slate-800 text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-900'}`}
-                >
-                  {isDark ? Icons.sun : Icons.moon}
-                </button>
-                <button
                   onClick={() => setShowHelpModal(true)}
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isDark ? 'bg-slate-800 text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-900'}`}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors bg-navy-800 text-cream/50 hover:text-cream"
                 >
                   {Icons.info}
                 </button>
@@ -2288,7 +2269,7 @@ function App() {
 
         {/* Tab Navigation */}
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
-          <div className={`flex gap-1 p-1 rounded-xl ${isDark ? 'bg-slate-800/50' : 'bg-slate-200/50'}`}>
+          <div className="flex gap-1 p-1 rounded-xl bg-navy-800/50">
             {[
               { id: 'dashboard', icon: Icons.grid, label: 'Übersicht' },
               { id: 'add', icon: Icons.plus, label: 'Hinzufügen' },
@@ -2301,11 +2282,9 @@ function App() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                  activeTab === tab.id 
-                    ? 'bg-violet-600 text-white shadow-lg' 
-                    : isDark 
-                      ? 'text-slate-400 hover:text-white hover:bg-slate-700/50' 
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-300/50'
+                  activeTab === tab.id
+                    ? 'bg-gold-400 text-navy-900 shadow-lg shadow-gold-400/25'
+                    : 'text-cream/60 hover:text-cream hover:bg-navy-700/50'
                 }`}
               >
                 <span className="w-4 h-4">{tab.icon}</span>
@@ -2321,82 +2300,97 @@ function App() {
           {/* === DASHBOARD === */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
-              {/* Stats Grid */}
+              {/* Hero Stats Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <StatCard icon={Icons.trophy} label="Regatten" value={stats.totalRegatten} color="purple" />
+                <StatCard icon={Icons.trophy} label="Regatten" value={stats.totalRegatten} color="gold" />
                 <StatCard icon={Icons.chart} label="Erstattung" value={`${stats.totalAmount.toFixed(0)} €`} color="emerald" />
                 <StatCard icon={Icons.trophy} label="Beste Platzierung" value={stats.bestPlacement ? `${stats.bestPlacement}.` : '-'} color="amber" />
                 <StatCard icon={Icons.list} label="Wettfahrten" value={stats.totalRaces} color="cyan" />
               </div>
-              
-              {/* Quick Actions */}
-              <GlassCard>
-                <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-slate-900'}`}>Schnellaktionen</h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <button
-                    onClick={() => setActiveTab('add')}
-                    className={`p-4 rounded-xl text-left transition-all ${isDark ? 'bg-slate-800/50 hover:bg-slate-700/50' : 'bg-slate-100 hover:bg-slate-200'}`}
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-500 mb-2">{Icons.plus}</div>
-                    <div className={`font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>Regatta hinzufügen</div>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('export'); generatePDF(); }}
-                    className={`p-4 rounded-xl text-left transition-all ${isDark ? 'bg-slate-800/50 hover:bg-slate-700/50' : 'bg-slate-100 hover:bg-slate-200'}`}
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-2">{Icons.document}</div>
-                    <div className={`font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>PDF erstellen</div>
-                  </button>
-                  <button
-                    onClick={() => setShowCrewModal(true)}
-                    className={`p-4 rounded-xl text-left transition-all ${isDark ? 'bg-slate-800/50 hover:bg-slate-700/50' : 'bg-slate-100 hover:bg-slate-200'}`}
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-500 mb-2">{Icons.userPlus}</div>
-                    <div className={`font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>Crew verwalten</div>
-                  </button>
-                </div>
-              </GlassCard>
-              
-              {/* Letzte Regatten */}
-              {regatten.length > 0 && (
-                <GlassCard>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Letzte Regatten</h2>
-                    <button onClick={() => setActiveTab('list')} className={`text-sm ${isDark ? 'text-violet-400' : 'text-violet-600'}`}>Alle anzeigen</button>
-                  </div>
-                  <div className="space-y-2">
-                    {regatten.slice(-3).reverse().map(r => (
-                      <div key={r.id} className={`flex items-center justify-between p-3 rounded-xl ${isDark ? 'bg-slate-800/50' : 'bg-slate-100'}`}>
-                        <div className="flex-1 min-w-0 mr-3">
-                          <div className={`font-medium truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                            {r.regattaName?.length > 50 ? r.regattaName.slice(0, 47) + '...' : r.regattaName}
-                          </div>
-                          <div className={`text-sm ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
-                            Platz {r.placement} • {r.invoiceAmount?.toFixed(2)} €
-                          </div>
-                        </div>
-                        <div className={`text-2xl font-bold flex-shrink-0 ${isDark ? 'text-slate-600' : 'text-slate-300'}`}>{r.placement}.</div>
+
+              {/* 2-Spalten Layout (Desktop) */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Hauptinhalt (2/3) */}
+                <div className="lg:col-span-2 space-y-6">
+                  {/* Letzte Regatten */}
+                  {regatten.length > 0 && (
+                    <GlassCard>
+                      <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-semibold text-cream">Letzte Regatten</h2>
+                        <button onClick={() => setActiveTab('list')} className="text-sm text-gold-400 hover:text-gold-300">Alle anzeigen</button>
                       </div>
-                    ))}
-                  </div>
-                </GlassCard>
-              )}
-              
-              {regatten.length === 0 && (
-                <GlassCard className="text-center py-12">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-violet-500/10 flex items-center justify-center text-violet-500">
-                    {Icons.boat}
-                  </div>
-                  <h3 className={`text-lg font-medium mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>Noch keine Regatten</h3>
-                  <p className={`mb-4 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Füge deine erste Regatta hinzu, um loszulegen.</p>
-                  <button
-                    onClick={() => setActiveTab('add')}
-                    className="px-6 py-2 rounded-xl bg-violet-600 text-white hover:bg-violet-500"
-                  >
-                    Regatta hinzufügen
-                  </button>
-                </GlassCard>
-              )}
+                      <div className="space-y-2">
+                        {regatten.slice(-5).reverse().map(r => (
+                          <div key={r.id} className="flex items-center justify-between p-3 rounded-xl bg-navy-800/50">
+                            <div className="flex-1 min-w-0 mr-3">
+                              <div className="font-medium truncate text-cream">
+                                {r.regattaName?.length > 50 ? r.regattaName.slice(0, 47) + '...' : r.regattaName}
+                              </div>
+                              <div className="text-sm text-cream/50">
+                                Platz {r.placement} • {r.invoiceAmount?.toFixed(2)} €
+                              </div>
+                            </div>
+                            <div className="text-2xl font-bold flex-shrink-0 text-sea-300">{r.placement}.</div>
+                          </div>
+                        ))}
+                      </div>
+                    </GlassCard>
+                  )}
+
+                  {regatten.length === 0 && (
+                    <GlassCard className="text-center py-12">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gold-400/10 flex items-center justify-center text-gold-400">
+                        {Icons.boat}
+                      </div>
+                      <h3 className="text-lg font-medium mb-2 text-cream">Noch keine Regatten</h3>
+                      <p className="mb-4 text-cream/60">Füge deine erste Regatta hinzu, um loszulegen.</p>
+                      <button
+                        onClick={() => setActiveTab('add')}
+                        className="px-6 py-2 rounded-xl bg-gold-400 text-navy-900 hover:bg-gold-300"
+                      >
+                        Regatta hinzufügen
+                      </button>
+                    </GlassCard>
+                  )}
+                </div>
+
+                {/* Sidebar (1/3) */}
+                <div className="space-y-6">
+                  {/* Quick Actions */}
+                  <GlassCard>
+                    <h2 className="text-lg font-semibold mb-4 text-cream">Schnellaktionen</h2>
+                    <div className="space-y-3">
+                      <button
+                        onClick={() => setActiveTab('add')}
+                        className="w-full p-4 rounded-xl text-left transition-all bg-navy-800/50 hover:bg-navy-700/50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-gold-400/10 flex items-center justify-center text-gold-400">{Icons.plus}</div>
+                          <div className="font-medium text-cream">Regatta hinzufügen</div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => { setActiveTab('export'); generatePDF(); }}
+                        className="w-full p-4 rounded-xl text-left transition-all bg-navy-800/50 hover:bg-navy-700/50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center text-success">{Icons.document}</div>
+                          <div className="font-medium text-cream">PDF erstellen</div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => setShowCrewModal(true)}
+                        className="w-full p-4 rounded-xl text-left transition-all bg-navy-800/50 hover:bg-navy-700/50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-sea-300/10 flex items-center justify-center text-sea-300">{Icons.userPlus}</div>
+                          <div className="font-medium text-cream">Crew verwalten</div>
+                        </div>
+                      </button>
+                    </div>
+                  </GlassCard>
+                </div>
+              </div>
             </div>
           )}
 
@@ -2416,8 +2410,8 @@ function App() {
                   <div className="flex items-center gap-3 mb-6">
                     <IconBadge icon={Icons.chart} color="purple" />
                     <div>
-                      <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Regatta-Ergebnis</h2>
-                      <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Ergebnisliste-PDF hochladen (empfohlen)</p>
+                      <h2 className={`text-lg font-semibold ${'text-cream'}`}>Regatta-Ergebnis</h2>
+                      <p className={`text-sm ${'text-cream/60'}`}>Ergebnisliste-PDF hochladen (empfohlen)</p>
                     </div>
                   </div>
                   
@@ -2433,10 +2427,8 @@ function App() {
                         }}
                         className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                           addMode === mode
-                            ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/25'
-                            : isDark 
-                              ? 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-300'
-                              : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                            ? 'bg-gold-400 text-navy-900 shadow-lg shadow-gold-400/25'
+                            : 'bg-navy-800 text-cream/60 hover:bg-navy-700 hover:text-cream/80'
                         }`}
                       >
                         {mode === 'upload' && '📄 PDF Upload'}
@@ -2451,7 +2443,7 @@ function App() {
                     <div className="space-y-4">
                       {/* Suchfeld / URL-Eingabe */}
                       <div>
-                        <label className={`block text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                        <label className={`block text-xs mb-1 ${'text-cream/50'}`}>
                           Regatta suchen oder manage2sail-Link einfügen
                         </label>
                         <div className="flex gap-2">
@@ -2461,12 +2453,12 @@ function App() {
                             onChange={(e) => setM2sSearchQuery(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && searchManage2Sail()}
                             placeholder="Name, Slug oder manage2sail.com/event/... Link"
-                            className={`flex-1 px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                            className={`flex-1 px-3 py-2 rounded-lg text-sm bg-navy-700 border-navy-600 text-cream placeholder-cream/40 border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                           />
                           <button
                             onClick={searchManage2Sail}
                             disabled={m2sSearching || !m2sSearchQuery.trim()}
-                            className="px-4 py-2 rounded-lg bg-violet-600 text-white font-medium hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            className="px-4 py-2 rounded-lg bg-gold-400 text-cream font-medium hover:bg-gold-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                           >
                             {m2sSearching ? (
                               <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
@@ -2476,14 +2468,14 @@ function App() {
                             {m2sSearchQuery.includes('manage2sail') ? 'Laden' : 'Suchen'}
                           </button>
                         </div>
-                        <div className={`mt-2 text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                          💡 Tipp: Am einfachsten: Öffne <a href="https://manage2sail.com/de-DE/event" target="_blank" rel="noopener" className="text-violet-400 hover:text-violet-300 underline">manage2sail.com</a>, suche deine Regatta und kopiere den Link hierher.
+                        <div className={`mt-2 text-xs ${'text-cream/50'}`}>
+                          💡 Tipp: Am einfachsten: Öffne <a href="https://manage2sail.com/de-DE/event" target="_blank" rel="noopener" className="text-gold-400 hover:text-gold-300 underline">manage2sail.com</a>, suche deine Regatta und kopiere den Link hierher.
                         </div>
                       </div>
                       
                       {/* Fehler */}
                       {m2sError && (
-                        <div className={`p-3 rounded-lg text-sm ${isDark ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-red-50 text-red-600 border border-red-200'}`}>
+                        <div className={`p-3 rounded-lg text-sm bg-coral/10 text-coral border border-coral/20`}>
                           ⚠️ {m2sError}
                         </div>
                       )}
@@ -2491,50 +2483,46 @@ function App() {
                       {/* Suchergebnisse */}
                       {m2sSearchResults.length > 0 && !m2sSelectedRegatta && (
                         <div>
-                          <div className={`text-xs mb-2 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                          <div className={`text-xs mb-2 ${'text-cream/50'}`}>
                             {m2sSearchResults.length} Regatta{m2sSearchResults.length !== 1 ? 'en' : ''} gefunden:
                           </div>
-                          <div className={`max-h-64 overflow-y-auto rounded-lg border ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
+                          <div className={`max-h-64 overflow-y-auto rounded-lg border border-navy-700`}>
                             {m2sSearchResults.map((result, idx) => (
                               <button
                                 key={idx}
                                 onClick={() => loadRegattaDetails(result)}
-                                className={`w-full px-4 py-3 text-left flex items-center gap-3 ${
-                                  isDark 
-                                    ? 'hover:bg-slate-700/50 border-b border-slate-700 last:border-0' 
-                                    : 'hover:bg-slate-50 border-b border-slate-100 last:border-0'
-                                }`}
+                                className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-navy-700/50 border-b border-navy-700 last:border-0"
                               >
                                 <div className="flex-1">
-                                  <div className={`font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{result.name}</div>
-                                  <div className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                                  <div className={`font-medium ${'text-cream'}`}>{result.name}</div>
+                                  <div className={`text-xs ${'text-cream/50'}`}>
                                     {result.fromDate && `${result.fromDate}${result.year} `}
                                     {result.place && `• ${result.place} `}
                                     {result.country && `(${result.country})`}
                                     {result.source === 'known' && ' • Vorgeschlagen'}
                                   </div>
                                 </div>
-                                <svg className={`w-5 h-5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                                <svg className={`w-5 h-5 ${'text-cream/50'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                               </button>
                             ))}
                           </div>
                         </div>
-                      )}}
-                      
+                      )}
+
                       {/* Lade-Anzeige für Details */}
                       {m2sLoadingDetails && (
-                        <div className={`p-6 rounded-lg text-center ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`}>
-                          <svg className="w-8 h-8 mx-auto mb-2 animate-spin text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                          <div className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Lade Regatta-Daten von manage2sail...</div>
+                        <div className={`p-6 rounded-lg text-center bg-navy-800`}>
+                          <svg className="w-8 h-8 mx-auto mb-2 animate-spin text-gold-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                          <div className={`text-sm ${'text-cream/60'}`}>Lade Regatta-Daten von manage2sail...</div>
                         </div>
                       )}
                       
                       {/* Geladene Regatta-Daten */}
                       {m2sRegattaData && (
-                        <div className={`p-4 rounded-lg ${isDark ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-50 border border-emerald-200'}`}>
+                        <div className={`p-4 rounded-lg bg-success/10 border border-success/20`}>
                           <div className="flex items-center gap-2 mb-3">
-                            <svg className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                            <span className={`font-medium ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>Regatta-Daten geladen!</span>
+                            <svg className={`w-5 h-5 text-success`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                            <span className={`font-medium text-success`}>Regatta-Daten geladen!</span>
                             <button
                               onClick={() => {
                                 setM2sSelectedRegatta(null);
@@ -2545,13 +2533,13 @@ function App() {
                                 setManualTotalParticipants('');
                                 setManualRaceCount('');
                               }}
-                              className={`ml-auto text-xs ${isDark ? 'text-slate-500 hover:text-slate-400' : 'text-slate-400 hover:text-slate-500'}`}
+                              className={`ml-auto text-xs text-cream/50 hover:text-cream/60`}
                             >
                               Andere Regatta wählen
                             </button>
                           </div>
                           
-                          <div className={`text-sm space-y-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                          <div className={`text-sm space-y-1 text-cream/80`}>
                             <div><strong>Regatta:</strong> {m2sRegattaData.event?.name}</div>
                             {m2sRegattaData.participant ? (
                               <>
@@ -2563,14 +2551,14 @@ function App() {
                                 <div><strong>Club:</strong> {m2sRegattaData.participant.club}</div>
                               </>
                             ) : (
-                              <div className={`${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
+                              <div className={`text-gold-300`}>
                                 ⚠️ Segelnummer "{boatData.segelnummer}" nicht in den Ergebnissen gefunden. Bitte Platzierung manuell eingeben oder Ergebnisliste-PDF hochladen.
                               </div>
                             )}
                             
                             {/* Gefundene Klassen anzeigen */}
                             {m2sRegattaData.debug?.classNames?.length > 0 && (
-                              <div className={`mt-2 text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                              <div className={`mt-2 text-xs ${'text-cream/50'}`}>
                                 Gefundene Klassen: {m2sRegattaData.debug.classNames.join(', ')}
                               </div>
                             )}
@@ -2578,12 +2566,12 @@ function App() {
                           
                           {/* Hinweis wenn Daten fehlen */}
                           {(!m2sRegattaData.participant?.rank || !m2sRegattaData.participant?.raceCount) && (
-                            <div className={`mt-3 p-3 rounded-lg text-sm ${isDark ? 'bg-amber-500/10 border border-amber-500/20 text-amber-400' : 'bg-amber-50 border border-amber-200 text-amber-700'}`}>
+                            <div className={`mt-3 p-3 rounded-lg text-sm bg-gold-400/10 border border-gold-400/20 text-gold-300`}>
                               <div className="flex items-center justify-between gap-2">
                                 <span>💡 <strong>Tipp:</strong> Falls Platzierung oder Wettfahrten fehlen, lade die Ergebnisliste-PDF hoch.</span>
                                 <button
                                   onClick={() => setAddMode('upload')}
-                                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap ${isDark ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300' : 'bg-amber-200 hover:bg-amber-300 text-amber-800'}`}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap bg-gold-400/20 hover:bg-gold-400/30 text-gold-300`}
                                 >
                                   📄 PDF hochladen
                                 </button>
@@ -2595,57 +2583,57 @@ function App() {
                       
                       {/* Daten-Eingabe nach manage2sail-Laden */}
                       {m2sRegattaData && (
-                        <div className={`p-4 rounded-xl ${isDark ? 'bg-slate-800/50' : 'bg-slate-100'}`}>
-                          <div className={`text-sm mb-4 font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                        <div className={`p-4 rounded-xl ${'bg-navy-800/50'}`}>
+                          <div className={`text-sm mb-4 font-medium text-cream/80`}>
                             Daten prüfen und ergänzen:
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="sm:col-span-2">
-                              <label className={`block text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Regattaname *</label>
+                              <label className={`block text-xs mb-1 ${'text-cream/50'}`}>Regattaname *</label>
                               <input
                                 type="text"
                                 value={manualRegattaName}
                                 onChange={(e) => setManualRegattaName(e.target.value)}
-                                className={`w-full px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                                className={`w-full px-3 py-2 rounded-lg text-sm bg-navy-700 border-navy-600 text-cream border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                               />
                             </div>
                             <div>
-                              <label className={`block text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Datum</label>
+                              <label className={`block text-xs mb-1 ${'text-cream/50'}`}>Datum</label>
                               <input
                                 type="date"
                                 value={manualDate}
                                 onChange={(e) => setManualDate(e.target.value)}
-                                className={`w-full px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                                className={`w-full px-3 py-2 rounded-lg text-sm bg-navy-700 border-navy-600 text-cream border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                               />
                             </div>
                             <div>
-                              <label className={`block text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Platzierung *</label>
+                              <label className={`block text-xs mb-1 ${'text-cream/50'}`}>Platzierung *</label>
                               <input
                                 type="number"
                                 min="1"
                                 value={manualPlacement}
                                 onChange={(e) => setManualPlacement(e.target.value)}
-                                className={`w-full px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                                className={`w-full px-3 py-2 rounded-lg text-sm bg-navy-700 border-navy-600 text-cream border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                               />
                             </div>
                             <div>
-                              <label className={`block text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Anzahl Teilnehmer</label>
+                              <label className={`block text-xs mb-1 ${'text-cream/50'}`}>Anzahl Teilnehmer</label>
                               <input
                                 type="number"
                                 min="1"
                                 value={manualTotalParticipants}
                                 onChange={(e) => setManualTotalParticipants(e.target.value)}
-                                className={`w-full px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                                className={`w-full px-3 py-2 rounded-lg text-sm bg-navy-700 border-navy-600 text-cream border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                               />
                             </div>
                             <div>
-                              <label className={`block text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Wettfahrten</label>
+                              <label className={`block text-xs mb-1 ${'text-cream/50'}`}>Wettfahrten</label>
                               <input
                                 type="number"
                                 min="1"
                                 value={manualRaceCount}
                                 onChange={(e) => setManualRaceCount(e.target.value)}
-                                className={`w-full px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                                className={`w-full px-3 py-2 rounded-lg text-sm bg-navy-700 border-navy-600 text-cream border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                               />
                             </div>
                           </div>
@@ -2653,7 +2641,7 @@ function App() {
                           <button
                             onClick={() => setAddStep(maxCrew > 1 ? 1 : 2)}
                             disabled={!manualPlacement || !manualRegattaName}
-                            className="mt-4 w-full py-3 rounded-xl bg-violet-600 text-white font-medium hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            className="mt-4 w-full py-3 rounded-xl bg-gold-400 text-cream font-medium hover:bg-gold-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                           >
                             Weiter {maxCrew > 1 ? 'zur Crew' : 'zur Rechnung'}
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
@@ -2663,8 +2651,8 @@ function App() {
                       
                       {/* Hinweis wenn noch keine Segelnummer */}
                       {!boatData.segelnummer && (
-                        <div className={`p-4 rounded-lg ${isDark ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-200'}`}>
-                          <div className={`text-sm ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>
+                        <div className={`p-4 rounded-lg bg-gold-400/10 border border-gold-400/20`}>
+                          <div className={`text-sm text-gold-300`}>
                             ⚠️ Bitte zuerst im <button onClick={() => setActiveTab('dashboard')} className="underline font-medium">Dashboard</button> die Segelnummer eingeben, damit deine Platzierung automatisch gefunden werden kann.
                           </div>
                         </div>
@@ -2677,12 +2665,12 @@ function App() {
                     <>
                       {/* Hinweis wenn von manage2sail gewechselt */}
                       {m2sRegattaData && (
-                        <div className={`mb-4 p-3 rounded-lg text-sm ${isDark ? 'bg-violet-500/10 border border-violet-500/20 text-violet-300' : 'bg-violet-50 border border-violet-200 text-violet-700'}`}>
+                        <div className={`mb-4 p-3 rounded-lg text-sm bg-gold-400/10 border border-gold-400/20 text-gold-300`}>
                           <div className="flex items-center justify-between">
                             <span>📋 Ergänze die fehlenden Daten aus der Ergebnisliste-PDF. Die Regatta-Daten "{manualRegattaName}" bleiben erhalten.</span>
                             <button
                               onClick={() => setAddMode('search')}
-                              className={`ml-2 text-xs underline ${isDark ? 'text-violet-400' : 'text-violet-600'}`}
+                              className={`ml-2 text-xs underline text-gold-400`}
                             >
                               Zurück
                             </button>
@@ -2695,13 +2683,11 @@ function App() {
                         onDragLeave={() => setIsDragging(false)}
                         onDrop={(e) => { e.preventDefault(); setIsDragging(false); processResultPdf(e.dataTransfer.files?.[0]); }}
                         className={`relative rounded-xl border-2 border-dashed p-8 text-center transition-all cursor-pointer ${
-                          isDragging 
-                            ? 'border-violet-500 bg-violet-500/10' 
-                            : pdfResult 
-                              ? 'border-emerald-500/50 bg-emerald-500/5' 
-                              : isDark 
-                                ? 'border-slate-700 hover:border-slate-600' 
-                                : 'border-slate-300 hover:border-slate-400'
+                          isDragging
+                            ? 'border-gold-400 bg-gold-400/10'
+                            : pdfResult
+                              ? 'border-success/50 bg-success/5'
+                              : 'border-navy-700 hover:border-navy-600'
                         }`}
                       >
                         <input
@@ -2712,17 +2698,15 @@ function App() {
                         />
                         
                         {pdfProcessing ? (
-                          <div className="text-violet-500">
+                          <div className="text-gold-400">
                             <svg className="w-12 h-12 mx-auto mb-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                             <div className="text-sm">{ocrProgress?.status || 'Verarbeite PDF...'}</div>
                           </div>
                         ) : pdfResult ? (
                           <div className={
-                            pdfResult.confidence === 'high' 
-                              ? (isDark ? 'text-emerald-400' : 'text-emerald-600')
-                              : pdfResult.confidence === 'medium'
-                                ? (isDark ? 'text-amber-400' : 'text-amber-600')
-                                : (isDark ? 'text-amber-400' : 'text-amber-600')
+                            pdfResult.confidence === 'high'
+                              ? 'text-success'
+                              : 'text-gold-300'
                           }>
                             {pdfResult.confidence === 'high' ? (
                               <svg className="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
@@ -2738,12 +2722,12 @@ function App() {
                                 )}
                               </>
                             ) : (
-                              <div className={`text-sm mt-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>Platzierung nicht erkannt</div>
+                              <div className={`text-sm mt-1 text-gold-300`}>Platzierung nicht erkannt</div>
                             )}
-                            {parserUsed && <div className={`text-xs mt-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Parser: {parserUsed}</div>}
+                            {parserUsed && <div className={`text-xs mt-2 ${'text-cream/50'}`}>Parser: {parserUsed}</div>}
                           </div>
                         ) : (
-                          <div className={isDark ? 'text-slate-400' : 'text-slate-500'}>
+                          <div className="text-cream/60">
                             <svg className="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                             <div className="text-sm">PDF hierher ziehen oder klicken</div>
                           </div>
@@ -2752,70 +2736,70 @@ function App() {
                       
                       {/* Parsing Feedback */}
                       {parsingFeedback && (
-                        <div className={`mt-4 p-4 rounded-xl ${isDark ? 'bg-amber-900/20 border border-amber-700/30' : 'bg-amber-50 border border-amber-200'}`}>
+                        <div className={`mt-4 p-4 rounded-xl bg-gold-400/10 border border-gold-400/30`}>
                           <div className="flex gap-3">
-                            <span className={`w-5 h-5 flex-shrink-0 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>{Icons.warning}</span>
-                            <div className={`text-sm ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>{parsingFeedback}</div>
+                            <span className={`w-5 h-5 flex-shrink-0 text-gold-300`}>{Icons.warning}</span>
+                            <div className={`text-sm text-gold-300`}>{parsingFeedback}</div>
                           </div>
                         </div>
                       )}
                       
                       {/* Manuelle Eingabe / Korrektur nach PDF Upload */}
                       {(pdfResult || currentPdfData) && (
-                        <div className={`mt-6 p-4 rounded-xl ${isDark ? 'bg-slate-800/50' : 'bg-slate-100'}`}>
-                          <div className={`text-sm mb-4 font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                        <div className={`mt-6 p-4 rounded-xl ${'bg-navy-800/50'}`}>
+                          <div className={`text-sm mb-4 font-medium text-cream/80`}>
                             {pdfResult?.participant?.rank ? 'Erkannte Daten prüfen/korrigieren:' : 'Daten manuell eingeben:'}
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="sm:col-span-2">
-                              <label className={`block text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Regattaname *</label>
+                              <label className={`block text-xs mb-1 ${'text-cream/50'}`}>Regattaname *</label>
                               <input
                                 type="text"
                                 value={manualRegattaName}
                                 onChange={(e) => setManualRegattaName(e.target.value)}
                                 placeholder="z.B. Berliner Meisterschaft 2025"
-                                className={`w-full px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                                className={`w-full px-3 py-2 rounded-lg text-sm bg-navy-700 border-navy-600 text-cream placeholder-cream/40 border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                               />
                             </div>
                             <div>
-                              <label className={`block text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Platzierung *</label>
+                              <label className={`block text-xs mb-1 ${'text-cream/50'}`}>Platzierung *</label>
                               <input
                                 type="number"
                                 min="1"
                                 value={manualPlacement}
                                 onChange={(e) => setManualPlacement(e.target.value)}
                                 placeholder="z.B. 5"
-                                className={`w-full px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                                className={`w-full px-3 py-2 rounded-lg text-sm bg-navy-700 border-navy-600 text-cream placeholder-cream/40 border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                               />
                             </div>
                             <div>
-                              <label className={`block text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Anzahl Teilnehmer</label>
+                              <label className={`block text-xs mb-1 ${'text-cream/50'}`}>Anzahl Teilnehmer</label>
                               <input
                                 type="number"
                                 min="1"
                                 value={manualTotalParticipants}
                                 onChange={(e) => setManualTotalParticipants(e.target.value)}
                                 placeholder="z.B. 45"
-                                className={`w-full px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                                className={`w-full px-3 py-2 rounded-lg text-sm bg-navy-700 border-navy-600 text-cream placeholder-cream/40 border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                               />
                             </div>
                             <div>
-                              <label className={`block text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Gewertete Wettfahrten</label>
+                              <label className={`block text-xs mb-1 ${'text-cream/50'}`}>Gewertete Wettfahrten</label>
                               <input
                                 type="number"
                                 min="1"
                                 value={manualRaceCount}
                                 onChange={(e) => setManualRaceCount(e.target.value)}
                                 placeholder="z.B. 6"
-                                className={`w-full px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                                className={`w-full px-3 py-2 rounded-lg text-sm bg-navy-700 border-navy-600 text-cream placeholder-cream/40 border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                               />
                             </div>
                             <div>
-                              <label className={`block text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Erkennungssicherheit</label>
-                              <div className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
+                              <label className={`block text-xs mb-1 ${'text-cream/50'}`}>Erkennungssicherheit</label>
+                              <div className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 bg-navy-800`}>
                                 {pdfResult?.confidence === 'high' && (
                                   <>
-                                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                    <span className="w-2 h-2 rounded-full bg-success"></span>
                                     <span className="text-emerald-500">Hoch</span>
                                   </>
                                 )}
@@ -2831,7 +2815,7 @@ function App() {
                                     <span className="text-red-500">Niedrig - bitte prüfen</span>
                                   </>
                                 )}
-                                <span className={`ml-auto text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                                <span className={`ml-auto text-xs ${'text-cream/50'}`}>
                                   {parserUsed || 'Manuell'}
                                 </span>
                               </div>
@@ -2841,10 +2825,10 @@ function App() {
                           {/* Debug: Extrahierter Text */}
                           {debugText && (
                             <details className="mt-4">
-                              <summary className={`cursor-pointer text-xs ${isDark ? 'text-slate-500 hover:text-slate-400' : 'text-slate-400 hover:text-slate-500'}`}>
+                              <summary className={`cursor-pointer text-xs text-cream/50 hover:text-cream/60`}>
                                 🔍 Extrahierten Text anzeigen (Debug)
                               </summary>
-                              <pre className={`mt-2 p-3 rounded-lg text-xs overflow-x-auto max-h-48 overflow-y-auto ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-600'}`}>
+                              <pre className={`mt-2 p-3 rounded-lg text-xs overflow-x-auto max-h-48 overflow-y-auto bg-navy-800 text-cream/60`}>
                                 {debugText}
                               </pre>
                             </details>
@@ -2853,7 +2837,7 @@ function App() {
                           <button
                             onClick={() => setAddStep(maxCrew > 1 ? 1 : 2)}
                             disabled={!manualPlacement || !manualRegattaName}
-                            className="mt-4 w-full py-3 rounded-xl bg-violet-600 text-white font-medium hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            className="mt-4 w-full py-3 rounded-xl bg-gold-400 text-cream font-medium hover:bg-gold-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                           >
                             Weiter {maxCrew > 1 ? 'zur Crew' : 'zur Rechnung'}
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
@@ -2865,61 +2849,61 @@ function App() {
                   
                   {/* ========== MODUS: Manuell ========== */}
                   {addMode === 'manual' && (
-                    <div className={`p-4 rounded-xl ${isDark ? 'bg-slate-800/50' : 'bg-slate-100'}`}>
-                      <div className={`text-sm mb-4 font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    <div className={`p-4 rounded-xl ${'bg-navy-800/50'}`}>
+                      <div className={`text-sm mb-4 font-medium text-cream/80`}>
                         Regatta-Daten manuell eingeben:
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="sm:col-span-2">
-                          <label className={`block text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Regattaname *</label>
+                          <label className={`block text-xs mb-1 ${'text-cream/50'}`}>Regattaname *</label>
                           <input
                             type="text"
                             value={manualRegattaName}
                             onChange={(e) => setManualRegattaName(e.target.value)}
                             placeholder="z.B. Berliner Meisterschaft 2025"
-                            className={`w-full px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                            className={`w-full px-3 py-2 rounded-lg text-sm bg-navy-700 border-navy-600 text-cream placeholder-cream/40 border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                           />
                         </div>
                         <div>
-                          <label className={`block text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Datum</label>
+                          <label className={`block text-xs mb-1 ${'text-cream/50'}`}>Datum</label>
                           <input
                             type="date"
                             value={manualDate}
                             onChange={(e) => setManualDate(e.target.value)}
-                            className={`w-full px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                            className={`w-full px-3 py-2 rounded-lg text-sm bg-navy-700 border-navy-600 text-cream border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                           />
                         </div>
                         <div>
-                          <label className={`block text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Platzierung *</label>
+                          <label className={`block text-xs mb-1 ${'text-cream/50'}`}>Platzierung *</label>
                           <input
                             type="number"
                             min="1"
                             value={manualPlacement}
                             onChange={(e) => setManualPlacement(e.target.value)}
                             placeholder="z.B. 5"
-                            className={`w-full px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                            className={`w-full px-3 py-2 rounded-lg text-sm bg-navy-700 border-navy-600 text-cream placeholder-cream/40 border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                           />
                         </div>
                         <div>
-                          <label className={`block text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Anzahl Teilnehmer</label>
+                          <label className={`block text-xs mb-1 ${'text-cream/50'}`}>Anzahl Teilnehmer</label>
                           <input
                             type="number"
                             min="1"
                             value={manualTotalParticipants}
                             onChange={(e) => setManualTotalParticipants(e.target.value)}
                             placeholder="z.B. 45"
-                            className={`w-full px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                            className={`w-full px-3 py-2 rounded-lg text-sm bg-navy-700 border-navy-600 text-cream placeholder-cream/40 border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                           />
                         </div>
                         <div>
-                          <label className={`block text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Gewertete Wettfahrten</label>
+                          <label className={`block text-xs mb-1 ${'text-cream/50'}`}>Gewertete Wettfahrten</label>
                           <input
                             type="number"
                             min="1"
                             value={manualRaceCount}
                             onChange={(e) => setManualRaceCount(e.target.value)}
                             placeholder="z.B. 6"
-                            className={`w-full px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                            className={`w-full px-3 py-2 rounded-lg text-sm bg-navy-700 border-navy-600 text-cream placeholder-cream/40 border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                           />
                         </div>
                       </div>
@@ -2930,7 +2914,7 @@ function App() {
                           setAddStep(maxCrew > 1 ? 1 : 2);
                         }}
                         disabled={!manualPlacement || !manualRegattaName}
-                        className="mt-4 w-full py-3 rounded-xl bg-violet-600 text-white font-medium hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="mt-4 w-full py-3 rounded-xl bg-gold-400 text-cream font-medium hover:bg-gold-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
                         Weiter {maxCrew > 1 ? 'zur Crew' : 'zur Rechnung'}
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
@@ -2946,15 +2930,15 @@ function App() {
                   <div className="flex items-center gap-3 mb-6">
                     <IconBadge icon={Icons.users} color="cyan" />
                     <div>
-                      <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Crew auswählen</h2>
-                      <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{minCrew}-{maxCrew} Personen für {currentBoatClass}</p>
+                      <h2 className={`text-lg font-semibold ${'text-cream'}`}>Crew auswählen</h2>
+                      <p className={`text-sm ${'text-cream/60'}`}>{minCrew}-{maxCrew} Personen für {currentBoatClass}</p>
                     </div>
                   </div>
                   
                   {/* Crew-Datenbank */}
                   {crewDatabase.length > 0 && (
                     <div className="mb-6">
-                      <div className={`text-sm mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Aus Crew-Datenbank ziehen:</div>
+                      <div className={`text-sm mb-2 ${'text-cream/60'}`}>Aus Crew-Datenbank ziehen:</div>
                       <div className="flex flex-wrap gap-2">
                         {crewDatabase.map(member => (
                           <div
@@ -2964,9 +2948,7 @@ function App() {
                             className={`px-3 py-1.5 rounded-lg text-sm cursor-move ${
                               selectedCrew.find(c => c.name === member.name)
                                 ? 'opacity-50 cursor-not-allowed'
-                                : isDark 
-                                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
-                                  : 'bg-cyan-100 text-cyan-700 border border-cyan-200'
+                                : 'bg-sea-300/10 text-sea-300 border border-sea-300/20'
                             }`}
                           >
                             {member.name} ({member.verein || 'k.A.'})
@@ -2978,15 +2960,15 @@ function App() {
                   
                   {/* NEU: Erkannte Crew aus PDF anzeigen */}
                   {detectedCrewFromPdf && !selectedCrew.find(c => c.name.toUpperCase().includes(detectedCrewFromPdf.split(' ')[0].toUpperCase())) && (
-                    <div className={`mb-4 p-4 rounded-xl border ${isDark ? 'bg-violet-500/10 border-violet-500/30' : 'bg-violet-50 border-violet-200'}`}>
+                    <div className={`mb-4 p-4 rounded-xl border bg-gold-400/10 border-gold-400/30`}>
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-violet-500">✨</span>
-                        <span className={`text-sm font-medium ${isDark ? 'text-violet-300' : 'text-violet-700'}`}>
+                        <span className="text-gold-400">✨</span>
+                        <span className={`text-sm font-medium text-gold-300`}>
                           Crew aus Ergebnisliste erkannt:
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{detectedCrewFromPdf}</span>
+                        <span className={`font-medium ${'text-cream'}`}>{detectedCrewFromPdf}</span>
                         <button
                           onClick={() => {
                             const member = { name: detectedCrewFromPdf, verein: 'TSC' };
@@ -2994,7 +2976,7 @@ function App() {
                             addToCrewDatabase(member);
                             setDetectedCrewFromPdf(null);
                           }}
-                          className="px-3 py-1.5 rounded-lg bg-violet-600 text-white text-sm hover:bg-violet-500 flex items-center gap-1"
+                          className="px-3 py-1.5 rounded-lg bg-gold-400 text-cream text-sm hover:bg-gold-300 flex items-center gap-1"
                         >
                           {Icons.plus} Übernehmen
                         </button>
@@ -3010,19 +2992,19 @@ function App() {
                         onDragOver={(e) => handleCrewDragOver(e, index)}
                         onDrop={(e) => handleCrewDrop(e, index)}
                         className={`flex items-center gap-3 p-3 rounded-xl border-2 border-dashed transition-all ${
-                          dragOverCrew === index 
-                            ? 'border-violet-500 bg-violet-500/10' 
+                          dragOverCrew === index
+                            ? 'border-gold-400 bg-gold-400/10'
                             : selectedCrew[index]
-                              ? isDark ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-emerald-300 bg-emerald-50'
+                              ? 'border-success/50 bg-success/5'
                               : index < minCrew
-                                ? isDark ? 'border-amber-500/30' : 'border-amber-300'
-                                : isDark ? 'border-slate-700' : 'border-slate-300'
+                                ? 'border-gold-400/30'
+                                : 'border-navy-700'
                         }`}
                       >
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                           selectedCrew[index]
-                            ? 'bg-emerald-500 text-white'
-                            : isDark ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-500'
+                            ? 'bg-success text-cream'
+                            : 'bg-navy-700 text-cream/60'
                         }`}>
                           {index + 1}
                         </div>
@@ -3030,13 +3012,13 @@ function App() {
                         {selectedCrew[index] ? (
                           <div className="flex-1 flex items-center justify-between">
                             <div>
-                              <div className={`font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{selectedCrew[index].name}</div>
-                              <div className={`text-sm ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>{selectedCrew[index].verein || 'Kein Verein'}</div>
+                              <div className={`font-medium ${'text-cream'}`}>{selectedCrew[index].name}</div>
+                              <div className={`text-sm ${'text-cream/50'}`}>{selectedCrew[index].verein || 'Kein Verein'}</div>
                             </div>
-                            <button onClick={() => removeCrewMember(index)} className="text-red-500 hover:text-red-400">{Icons.x}</button>
+                            <button onClick={() => removeCrewMember(index)} className="text-red-500 hover:text-coral">{Icons.x}</button>
                           </div>
                         ) : (
-                          <div className={`flex-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                          <div className={`flex-1 ${'text-cream/50'}`}>
                             {index === 0 ? 'Steuerperson/Skipper:in' : `Crew ${index + 1}`}
                             {index < minCrew && <span className="text-amber-500 ml-2">*</span>}
                           </div>
@@ -3046,20 +3028,20 @@ function App() {
                   </div>
                   
                   {/* Neues Crewmitglied hinzufügen */}
-                  <div className={`p-4 rounded-xl ${isDark ? 'bg-slate-800/50' : 'bg-slate-100'}`}>
-                    <div className={`text-sm mb-3 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Neues Crewmitglied:</div>
+                  <div className={`p-4 rounded-xl ${'bg-navy-800/50'}`}>
+                    <div className={`text-sm mb-3 ${'text-cream/60'}`}>Neues Crewmitglied:</div>
                     <div className="flex gap-2">
                       <input
                         type="text"
                         placeholder="Name"
                         id="newCrewName"
-                        className={`flex-1 px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'} border`}
+                        className={`flex-1 px-3 py-2 rounded-lg text-sm bg-navy-700 border-navy-600 text-cream border`}
                       />
                       <input
                         type="text"
                         placeholder="Verein"
                         id="newCrewVerein"
-                        className={`w-24 px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'} border`}
+                        className={`w-24 px-3 py-2 rounded-lg text-sm bg-navy-700 border-navy-600 text-cream border`}
                       />
                       <button
                         onClick={() => {
@@ -3073,7 +3055,7 @@ function App() {
                             document.getElementById('newCrewVerein').value = '';
                           }
                         }}
-                        className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-500"
+                        className="px-4 py-2 rounded-lg bg-gold-400 text-cream hover:bg-gold-300"
                       >
                         {Icons.plus}
                       </button>
@@ -3083,14 +3065,14 @@ function App() {
                   <div className="flex gap-3 mt-6">
                     <button
                       onClick={() => setAddStep(0)}
-                      className={`flex-1 py-3 rounded-xl ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-slate-200 text-slate-800 hover:bg-slate-300'}`}
+                      className={`flex-1 py-3 rounded-xl bg-navy-700 text-cream hover:bg-navy-600`}
                     >
                       Zurück
                     </button>
                     <button
                       onClick={() => setAddStep(2)}
                       disabled={selectedCrew.length < minCrew}
-                      className="flex-1 py-3 rounded-xl bg-violet-600 text-white font-medium hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 py-3 rounded-xl bg-gold-400 text-cream font-medium hover:bg-gold-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Weiter zur Rechnung
                     </button>
@@ -3104,8 +3086,8 @@ function App() {
                   <div className="flex items-center gap-3 mb-6">
                     <IconBadge icon={Icons.receipt} color="amber" />
                     <div>
-                      <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Rechnung</h2>
-                      <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Startgeld-Rechnung hochladen</p>
+                      <h2 className={`text-lg font-semibold ${'text-cream'}`}>Rechnung</h2>
+                      <p className={`text-sm ${'text-cream/60'}`}>Startgeld-Rechnung hochladen</p>
                     </div>
                   </div>
                   
@@ -3114,13 +3096,11 @@ function App() {
                     onDragLeave={() => setIsDraggingInvoice(false)}
                     onDrop={(e) => { e.preventDefault(); setIsDraggingInvoice(false); processInvoicePdf(e.dataTransfer.files?.[0]); }}
                     className={`relative rounded-xl border-2 border-dashed p-8 text-center transition-all cursor-pointer ${
-                      isDraggingInvoice 
-                        ? 'border-amber-500 bg-amber-500/10' 
-                        : currentInvoiceData 
-                          ? 'border-emerald-500/50 bg-emerald-500/5' 
-                          : isDark 
-                            ? 'border-slate-700 hover:border-slate-600' 
-                            : 'border-slate-300 hover:border-slate-400'
+                      isDraggingInvoice
+                        ? 'border-gold-400 bg-gold-400/10'
+                        : currentInvoiceData
+                          ? 'border-success/50 bg-success/5'
+                          : 'border-navy-700 hover:border-navy-600'
                     }`}
                   >
                     <input
@@ -3136,12 +3116,12 @@ function App() {
                         <div className="text-sm">Rechnung wird verarbeitet...</div>
                       </div>
                     ) : currentInvoiceData ? (
-                      <div className={isDark ? 'text-emerald-400' : 'text-emerald-600'}>
+                      <div className="text-success">
                         <svg className="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                         <div className="font-medium">Rechnung hochgeladen</div>
                       </div>
                     ) : (
-                      <div className={isDark ? 'text-slate-400' : 'text-slate-500'}>
+                      <div className="text-cream/60">
                         <svg className="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                         <div className="text-sm">PDF hierher ziehen oder klicken</div>
                       </div>
@@ -3149,27 +3129,27 @@ function App() {
                   </div>
                   
                   <div className="mt-6">
-                    <label className={`block text-sm mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Rechnungsbetrag (€) *</label>
+                    <label className={`block text-sm mb-2 ${'text-cream/60'}`}>Rechnungsbetrag (€) *</label>
                     <input
                       type="text"
                       value={currentInvoiceAmount}
                       onChange={(e) => setCurrentInvoiceAmount(e.target.value)}
                       placeholder="45,00"
-                      className={`w-full px-4 py-3 rounded-xl text-lg ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                      className={`w-full px-4 py-3 rounded-xl text-lg bg-navy-800 border-navy-700 text-cream border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                     />
                   </div>
                   
                   <div className="flex gap-3 mt-6">
                     <button
                       onClick={() => setAddStep(maxCrew > 1 ? 1 : 0)}
-                      className={`flex-1 py-3 rounded-xl ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-slate-200 text-slate-800 hover:bg-slate-300'}`}
+                      className={`flex-1 py-3 rounded-xl bg-navy-700 text-cream hover:bg-navy-600`}
                     >
                       Zurück
                     </button>
                     <button
                       onClick={addRegattaFromPdf}
                       disabled={!currentInvoiceAmount}
-                      className="flex-1 py-3 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 py-3 rounded-xl bg-emerald-600 text-cream font-medium hover:bg-success disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Regatta speichern
                     </button>
@@ -3186,38 +3166,38 @@ function App() {
                 <div className="flex items-center gap-3">
                   <IconBadge icon={Icons.list} color="emerald" />
                   <div>
-                    <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Regatten {currentSeason}</h2>
-                    <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{regatten.length} Einträge • {totalAmount.toFixed(2)} € gesamt</p>
+                    <h2 className={`text-lg font-semibold ${'text-cream'}`}>Regatten {currentSeason}</h2>
+                    <p className={`text-sm ${'text-cream/60'}`}>{regatten.length} Einträge • {totalAmount.toFixed(2)} € gesamt</p>
                   </div>
                 </div>
               </div>
               
               {regatten.length === 0 ? (
                 <div className="text-center py-12">
-                  <div className={`w-16 h-16 mx-auto mb-4 rounded-full ${isDark ? 'bg-slate-800' : 'bg-slate-100'} flex items-center justify-center`}>
+                  <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-navy-800 flex items-center justify-center`}>
                     {Icons.list}
                   </div>
-                  <p className={isDark ? 'text-slate-400' : 'text-slate-600'}>Noch keine Regatten</p>
+                  <p className={'text-cream/60'}>Noch keine Regatten</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {regatten.map((r, i) => (
-                    <div key={r.id} className={`p-4 rounded-xl ${isDark ? 'bg-slate-800/50' : 'bg-slate-100'}`}>
+                    <div key={r.id} className={`p-4 rounded-xl ${'bg-navy-800/50'}`}>
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className={`text-2xl font-bold flex-shrink-0 ${isDark ? 'text-slate-600' : 'text-slate-300'}`}>{i + 1}</span>
+                            <span className={`text-2xl font-bold flex-shrink-0 text-cream/70`}>{i + 1}</span>
                             <div className="min-w-0">
-                              <div className={`font-medium truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                              <div className={`font-medium truncate ${'text-cream'}`}>
                                 {r.regattaName?.length > 60 ? r.regattaName.slice(0, 57) + '...' : r.regattaName}
                               </div>
-                              <div className={`text-sm ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                              <div className={`text-sm ${'text-cream/50'}`}>
                                 {r.date && new Date(r.date).toLocaleDateString('de-DE')} • 
                                 Platz {r.placement} von {r.totalParticipants} • 
                                 {r.raceCount} Wettfahrten
                               </div>
                               {r.crew?.length > 0 && (
-                                <div className={`text-xs mt-1 ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}>
+                                <div className={`text-xs mt-1 text-sea-300`}>
                                   Crew: {r.crew.map(c => c.name).join(', ')}
                                 </div>
                               )}
@@ -3225,10 +3205,10 @@ function App() {
                           </div>
                         </div>
                         <div className="flex items-center gap-3 flex-shrink-0 ml-3">
-                          <span className={`text-lg font-semibold ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>{r.invoiceAmount?.toFixed(2)} €</span>
+                          <span className={`text-lg font-semibold text-success`}>{r.invoiceAmount?.toFixed(2)} €</span>
                           <button
                             onClick={() => startEditRegatta(r)}
-                            className={`w-8 h-8 rounded-lg ${isDark ? 'bg-violet-500/10 text-violet-400 hover:bg-violet-500/20' : 'bg-violet-100 text-violet-600 hover:bg-violet-200'} flex items-center justify-center`}
+                            className={`w-8 h-8 rounded-lg bg-gold-400/10 text-gold-400 hover:bg-gold-300/20 flex items-center justify-center`}
                             title="Bearbeiten"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -3238,7 +3218,7 @@ function App() {
                               setRegatten(prev => prev.filter(reg => reg.id !== r.id));
                               setPdfAttachments(prev => prev.filter(a => a.regattaId !== r.id));
                             }}
-                            className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 flex items-center justify-center"
+                            className="w-8 h-8 rounded-lg bg-coral/10 text-red-500 hover:bg-red-500/20 flex items-center justify-center"
                             title="Löschen"
                           >
                             {Icons.x}
@@ -3259,13 +3239,13 @@ function App() {
                 <div className="flex items-center gap-3">
                   <IconBadge icon={Icons.users} color="cyan" />
                   <div>
-                    <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Crew-Datenbank</h2>
-                    <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{crewDatabase.length} Mitglieder gespeichert</p>
+                    <h2 className={`text-lg font-semibold ${'text-cream'}`}>Crew-Datenbank</h2>
+                    <p className={`text-sm ${'text-cream/60'}`}>{crewDatabase.length} Mitglieder gespeichert</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowCrewModal(true)}
-                  className="px-4 py-2 rounded-xl bg-violet-600 text-white hover:bg-violet-500 flex items-center gap-2"
+                  className="px-4 py-2 rounded-xl bg-gold-400 text-cream hover:bg-gold-300 flex items-center gap-2"
                 >
                   {Icons.userPlus} Hinzufügen
                 </button>
@@ -3273,26 +3253,26 @@ function App() {
               
               {crewDatabase.length === 0 ? (
                 <div className="text-center py-12">
-                  <div className={`w-16 h-16 mx-auto mb-4 rounded-full ${isDark ? 'bg-slate-800' : 'bg-slate-100'} flex items-center justify-center`}>
+                  <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-navy-800 flex items-center justify-center`}>
                     {Icons.users}
                   </div>
-                  <p className={`mb-4 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Noch keine Crewmitglieder gespeichert</p>
-                  <p className={`text-sm ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                  <p className={`mb-4 ${'text-cream/60'}`}>Noch keine Crewmitglieder gespeichert</p>
+                  <p className={`text-sm ${'text-cream/50'}`}>
                     Crewmitglieder werden automatisch gespeichert, wenn du sie bei einer Regatta hinzufügst.
                   </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {crewDatabase.map(member => (
-                    <div key={member.id} className={`p-4 rounded-xl ${isDark ? 'bg-slate-800/50' : 'bg-slate-100'}`}>
+                    <div key={member.id} className={`p-4 rounded-xl ${'bg-navy-800/50'}`}>
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className={`font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{member.name}</div>
-                          <div className={`text-sm ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>{member.verein || 'Kein Verein'}</div>
+                          <div className={`font-medium ${'text-cream'}`}>{member.name}</div>
+                          <div className={`text-sm ${'text-cream/50'}`}>{member.verein || 'Kein Verein'}</div>
                         </div>
                         <button
                           onClick={() => removeFromCrewDatabase(member.id)}
-                          className="text-red-500 hover:text-red-400"
+                          className="text-red-500 hover:text-coral"
                         >
                           {Icons.x}
                         </button>
@@ -3311,8 +3291,8 @@ function App() {
                 <div className="flex items-center gap-3 mb-6">
                   <IconBadge icon={Icons.download} color="emerald" />
                   <div>
-                    <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Export & Einreichen</h2>
-                    <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Saison {currentSeason} • {regatten.length} Regatten • {totalAmount.toFixed(2)} €</p>
+                    <h2 className={`text-lg font-semibold ${'text-cream'}`}>Export & Einreichen</h2>
+                    <p className={`text-sm ${'text-cream/60'}`}>Saison {currentSeason} • {regatten.length} Regatten • {totalAmount.toFixed(2)} €</p>
                   </div>
                 </div>
                 
@@ -3320,54 +3300,54 @@ function App() {
                   <button
                     onClick={generatePDF}
                     disabled={regatten.length === 0}
-                    className={`group p-4 rounded-xl text-left transition-all disabled:opacity-50 ${isDark ? 'bg-slate-800/50 hover:bg-slate-700/50' : 'bg-slate-100 hover:bg-slate-200'}`}
+                    className={`group p-4 rounded-xl text-left transition-all disabled:opacity-50 ${'bg-navy-800/50 hover:bg-navy-700/50'}`}
                   >
-                    <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-500 mb-2">{Icons.document}</div>
-                    <div className={`font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>PDF-Antrag</div>
-                    <div className={`text-sm ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Erstattungsformular</div>
+                    <div className="w-10 h-10 rounded-lg bg-gold-400/10 flex items-center justify-center text-gold-400 mb-2">{Icons.document}</div>
+                    <div className={`font-medium ${'text-cream'}`}>PDF-Antrag</div>
+                    <div className={`text-sm ${'text-cream/50'}`}>Erstattungsformular</div>
                   </button>
                   
                   <button
                     onClick={generateCSV}
                     disabled={regatten.length === 0}
-                    className={`group p-4 rounded-xl text-left transition-all disabled:opacity-50 ${isDark ? 'bg-slate-800/50 hover:bg-slate-700/50' : 'bg-slate-100 hover:bg-slate-200'}`}
+                    className={`group p-4 rounded-xl text-left transition-all disabled:opacity-50 ${'bg-navy-800/50 hover:bg-navy-700/50'}`}
                   >
-                    <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-2">{Icons.table}</div>
-                    <div className={`font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>CSV-Export</div>
-                    <div className={`text-sm ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Buchungssatz</div>
+                    <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center text-emerald-500 mb-2">{Icons.table}</div>
+                    <div className={`font-medium ${'text-cream'}`}>CSV-Export</div>
+                    <div className={`text-sm ${'text-cream/50'}`}>Buchungssatz</div>
                   </button>
                   
                   <button
                     onClick={generateSEPA}
                     disabled={regatten.length === 0}
-                    className={`group p-4 rounded-xl text-left transition-all disabled:opacity-50 ${isDark ? 'bg-slate-800/50 hover:bg-slate-700/50' : 'bg-slate-100 hover:bg-slate-200'}`}
+                    className={`group p-4 rounded-xl text-left transition-all disabled:opacity-50 ${'bg-navy-800/50 hover:bg-navy-700/50'}`}
                   >
-                    <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-500 mb-2">{Icons.bank}</div>
-                    <div className={`font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>SEPA-XML</div>
-                    <div className={`text-sm ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Überweisung</div>
+                    <div className="w-10 h-10 rounded-lg bg-sea-300/10 flex items-center justify-center text-cyan-500 mb-2">{Icons.bank}</div>
+                    <div className={`font-medium ${'text-cream'}`}>SEPA-XML</div>
+                    <div className={`text-sm ${'text-cream/50'}`}>Überweisung</div>
                   </button>
                   
                   <button
                     onClick={downloadAllDocuments}
                     disabled={regatten.length === 0}
-                    className={`group p-4 rounded-xl text-left transition-all disabled:opacity-50 ${isDark ? 'bg-slate-800/50 hover:bg-slate-700/50' : 'bg-slate-100 hover:bg-slate-200'}`}
+                    className={`group p-4 rounded-xl text-left transition-all disabled:opacity-50 ${'bg-navy-800/50 hover:bg-navy-700/50'}`}
                   >
-                    <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 mb-2">{Icons.archive}</div>
-                    <div className={`font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>Alle Dateien</div>
-                    <div className={`text-sm ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Inkl. Belege</div>
+                    <div className="w-10 h-10 rounded-lg bg-gold-400/10 flex items-center justify-center text-amber-500 mb-2">{Icons.archive}</div>
+                    <div className={`font-medium ${'text-cream'}`}>Alle Dateien</div>
+                    <div className={`text-sm ${'text-cream/50'}`}>Inkl. Belege</div>
                   </button>
                 </div>
               </GlassCard>
               
               {/* Online Einreichen */}
-              <div className={`p-6 rounded-xl ${isDark ? 'bg-gradient-to-r from-emerald-900/30 to-emerald-800/20 border border-emerald-700/30' : 'bg-gradient-to-r from-emerald-50 to-emerald-100 border border-emerald-200'}`}>
+              <div className={`p-6 rounded-xl bg-gradient-to-r from-success/20 to-success/10 border border-success/30`}>
                 <div className="flex items-center gap-4 mb-5">
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${isDark ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-200 text-emerald-700'}`}>
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center bg-success/10 text-success`}>
                     {Icons.send}
                   </div>
                   <div>
-                    <div className={`font-semibold text-lg ${isDark ? 'text-white' : 'text-slate-900'}`}>Online einreichen</div>
-                    <div className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Direkt an den TSC senden</div>
+                    <div className={`font-semibold text-lg ${'text-cream'}`}>Online einreichen</div>
+                    <div className={`text-sm ${'text-cream/60'}`}>Direkt an den TSC senden</div>
                   </div>
                 </div>
                 
@@ -3375,7 +3355,7 @@ function App() {
                   <button
                     onClick={submitOnline}
                     disabled={regatten.length === 0 || isSubmitting}
-                    className="flex-1 py-3 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="flex-1 py-3 px-6 rounded-xl bg-emerald-600 hover:bg-success text-cream font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {isSubmitting ? (
                       <><div className="w-5 h-5 animate-spin">{Icons.refresh}</div> Wird gesendet...</>
@@ -3386,7 +3366,7 @@ function App() {
                   <button
                     onClick={downloadAllDocuments}
                     disabled={regatten.length === 0}
-                    className={`py-3 px-6 rounded-xl font-medium transition-all disabled:opacity-50 flex items-center gap-2 ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-white text-slate-800 hover:bg-slate-50 border border-slate-200'}`}
+                    className={`py-3 px-6 rounded-xl font-medium transition-all disabled:opacity-50 flex items-center gap-2 bg-navy-700 text-cream hover:bg-navy-600`}
                   >
                     {Icons.mail} Per E-Mail
                   </button>
@@ -3401,36 +3381,36 @@ function App() {
               <div className="flex items-center gap-3 mb-6">
                 <IconBadge icon={Icons.boat} color="cyan" />
                 <div>
-                  <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Bootsdaten</h2>
-                  <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Werden für alle Anträge verwendet</p>
+                  <h2 className={`text-lg font-semibold ${'text-cream'}`}>Bootsdaten</h2>
+                  <p className={`text-sm ${'text-cream/60'}`}>Werden für alle Anträge verwendet</p>
                 </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className={`block text-sm mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Name Segler:in *</label>
+                  <label className={`block text-sm mb-2 ${'text-cream/60'}`}>Name Segler:in *</label>
                   <input
                     type="text"
                     value={boatData.seglername}
                     onChange={(e) => setBoatData(prev => ({ ...prev, seglername: e.target.value }))}
-                    className={`w-full px-4 py-3 rounded-xl ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                    className={`w-full px-4 py-3 rounded-xl bg-navy-800 border-navy-700 text-cream border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                   />
                 </div>
                 <div>
-                  <label className={`block text-sm mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Segelnummer *</label>
+                  <label className={`block text-sm mb-2 ${'text-cream/60'}`}>Segelnummer *</label>
                   <input
                     type="text"
                     value={boatData.segelnummer}
                     onChange={(e) => setBoatData(prev => ({ ...prev, segelnummer: e.target.value.toUpperCase() }))}
-                    className={`w-full px-4 py-3 rounded-xl ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                    className={`w-full px-4 py-3 rounded-xl bg-navy-800 border-navy-700 text-cream border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                   />
                 </div>
                 <div>
-                  <label className={`block text-sm mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Bootsklasse</label>
+                  <label className={`block text-sm mb-2 ${'text-cream/60'}`}>Bootsklasse</label>
                   <select
                     value={boatData.bootsklasse}
                     onChange={(e) => setBoatData(prev => ({ ...prev, bootsklasse: e.target.value }))}
-                    className={`w-full px-4 py-3 rounded-xl ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                    className={`w-full px-4 py-3 rounded-xl bg-navy-800 border-navy-700 text-cream border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                   >
                     {Object.keys(BOAT_CLASSES).map(k => (
                       <option key={k} value={k}>{k} ({BOAT_CLASSES[k].crew} Pers.)</option>
@@ -3438,29 +3418,29 @@ function App() {
                   </select>
                 </div>
                 <div>
-                  <label className={`block text-sm mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>IBAN</label>
+                  <label className={`block text-sm mb-2 ${'text-cream/60'}`}>IBAN</label>
                   <input
                     type="text"
                     value={boatData.iban}
                     onChange={(e) => setBoatData(prev => ({ ...prev, iban: e.target.value.toUpperCase() }))}
-                    className={`w-full px-4 py-3 rounded-xl ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                    className={`w-full px-4 py-3 rounded-xl bg-navy-800 border-navy-700 text-cream border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className={`block text-sm mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Kontoinhaber:in</label>
+                  <label className={`block text-sm mb-2 ${'text-cream/60'}`}>Kontoinhaber:in</label>
                   <input
                     type="text"
                     value={boatData.kontoinhaber}
                     onChange={(e) => setBoatData(prev => ({ ...prev, kontoinhaber: e.target.value }))}
-                    className={`w-full px-4 py-3 rounded-xl ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                    className={`w-full px-4 py-3 rounded-xl bg-navy-800 border-navy-700 text-cream border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                   />
                 </div>
               </div>
               
               {!boatData.segelnummer && (
-                <div className={`mt-4 p-4 rounded-xl flex items-start gap-3 ${isDark ? 'bg-amber-900/20 border border-amber-700/30' : 'bg-amber-50 border border-amber-200'}`}>
-                  <span className={`w-5 h-5 flex-shrink-0 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>{Icons.warning}</span>
-                  <span className={`text-sm ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>Die Segelnummer wird benötigt, um deine Platzierung automatisch zu erkennen.</span>
+                <div className={`mt-4 p-4 rounded-xl flex items-start gap-3 bg-gold-400/10 border border-gold-400/30`}>
+                  <span className={`w-5 h-5 flex-shrink-0 text-gold-300`}>{Icons.warning}</span>
+                  <span className={`text-sm text-gold-300`}>Die Segelnummer wird benötigt, um deine Platzierung automatisch zu erkennen.</span>
                 </div>
               )}
             </GlassCard>
@@ -3476,12 +3456,12 @@ function App() {
                 onClick={() => { setCurrentSeason(s); setShowSeasonModal(false); }}
                 className={`w-full p-4 rounded-xl text-left transition-all ${
                   s === currentSeason
-                    ? 'bg-violet-600 text-white'
-                    : isDark ? 'bg-slate-800 hover:bg-slate-700 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-900'
+                    ? 'bg-gold-400 text-navy-900'
+                    : 'bg-navy-800 hover:bg-navy-700 text-cream'
                 }`}
               >
                 <div className="font-medium">Saison {s}</div>
-                <div className={`text-sm ${s === currentSeason ? 'text-violet-200' : isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                <div className={`text-sm ${s === currentSeason ? 'text-navy-900/70' : 'text-cream/60'}`}>
                   {(allRegatten[s] || []).length} Regatten
                 </div>
               </button>
@@ -3493,7 +3473,7 @@ function App() {
                 setCurrentSeason(newSeason);
                 setShowSeasonModal(false);
               }}
-              className={`w-full p-4 rounded-xl border-2 border-dashed ${isDark ? 'border-slate-700 text-slate-400 hover:border-violet-500 hover:text-violet-400' : 'border-slate-300 text-slate-500 hover:border-violet-400 hover:text-violet-600'}`}
+              className={`w-full p-4 rounded-xl border-2 border-dashed border-navy-700 text-cream/60 hover:border-gold-400 hover:text-gold-400`}
             >
               + Neue Saison starten
             </button>
@@ -3503,20 +3483,20 @@ function App() {
         <Modal isOpen={showCrewModal} onClose={() => setShowCrewModal(false)} title="Crewmitglied hinzufügen">
           <div className="space-y-4">
             <div>
-              <label className={`block text-sm mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Name *</label>
+              <label className={`block text-sm mb-2 ${'text-cream/60'}`}>Name *</label>
               <input
                 type="text"
                 id="modalCrewName"
-                className={`w-full px-4 py-3 rounded-xl ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'} border`}
+                className={`w-full px-4 py-3 rounded-xl bg-navy-800 border-navy-700 text-cream border`}
               />
             </div>
             <div>
-              <label className={`block text-sm mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Verein</label>
+              <label className={`block text-sm mb-2 ${'text-cream/60'}`}>Verein</label>
               <input
                 type="text"
                 id="modalCrewVerein"
                 defaultValue="TSC"
-                className={`w-full px-4 py-3 rounded-xl ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'} border`}
+                className={`w-full px-4 py-3 rounded-xl bg-navy-800 border-navy-700 text-cream border`}
               />
             </div>
             <button
@@ -3528,7 +3508,7 @@ function App() {
                   setShowCrewModal(false);
                 }
               }}
-              className="w-full py-3 rounded-xl bg-violet-600 text-white font-medium hover:bg-violet-500"
+              className="w-full py-3 rounded-xl bg-gold-400 text-cream font-medium hover:bg-gold-300"
             >
               Speichern
             </button>
@@ -3539,33 +3519,33 @@ function App() {
         <Modal isOpen={showEditModal} onClose={cancelEditRegatta} title="Regatta bearbeiten">
           <div className="space-y-4">
             <div>
-              <label className={`block text-sm mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Regattaname *</label>
+              <label className={`block text-sm mb-2 ${'text-cream/60'}`}>Regattaname *</label>
               <input
                 type="text"
                 value={editForm.regattaName}
                 onChange={(e) => setEditForm(prev => ({ ...prev, regattaName: e.target.value }))}
-                className={`w-full px-4 py-3 rounded-xl ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                className={`w-full px-4 py-3 rounded-xl bg-navy-800 border-navy-700 text-cream border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                 placeholder="Name der Regatta"
               />
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className={`block text-sm mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Datum</label>
+                <label className={`block text-sm mb-2 ${'text-cream/60'}`}>Datum</label>
                 <input
                   type="date"
                   value={editForm.date}
                   onChange={(e) => setEditForm(prev => ({ ...prev, date: e.target.value }))}
-                  className={`w-full px-4 py-3 rounded-xl ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                  className={`w-full px-4 py-3 rounded-xl bg-navy-800 border-navy-700 text-cream border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                 />
               </div>
               <div>
-                <label className={`block text-sm mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Platzierung *</label>
+                <label className={`block text-sm mb-2 ${'text-cream/60'}`}>Platzierung *</label>
                 <input
                   type="number"
                   value={editForm.placement}
                   onChange={(e) => setEditForm(prev => ({ ...prev, placement: e.target.value }))}
-                  className={`w-full px-4 py-3 rounded-xl ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                  className={`w-full px-4 py-3 rounded-xl bg-navy-800 border-navy-700 text-cream border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                   placeholder="z.B. 5"
                   min="1"
                 />
@@ -3574,23 +3554,23 @@ function App() {
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className={`block text-sm mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Anzahl Teilnehmer</label>
+                <label className={`block text-sm mb-2 ${'text-cream/60'}`}>Anzahl Teilnehmer</label>
                 <input
                   type="number"
                   value={editForm.totalParticipants}
                   onChange={(e) => setEditForm(prev => ({ ...prev, totalParticipants: e.target.value }))}
-                  className={`w-full px-4 py-3 rounded-xl ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                  className={`w-full px-4 py-3 rounded-xl bg-navy-800 border-navy-700 text-cream border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                   placeholder="z.B. 45"
                   min="1"
                 />
               </div>
               <div>
-                <label className={`block text-sm mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Wettfahrten</label>
+                <label className={`block text-sm mb-2 ${'text-cream/60'}`}>Wettfahrten</label>
                 <input
                   type="number"
                   value={editForm.raceCount}
                   onChange={(e) => setEditForm(prev => ({ ...prev, raceCount: e.target.value }))}
-                  className={`w-full px-4 py-3 rounded-xl ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                  className={`w-full px-4 py-3 rounded-xl bg-navy-800 border-navy-700 text-cream border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                   placeholder="z.B. 6"
                   min="1"
                 />
@@ -3598,12 +3578,12 @@ function App() {
             </div>
             
             <div>
-              <label className={`block text-sm mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Rechnungsbetrag (€) *</label>
+              <label className={`block text-sm mb-2 ${'text-cream/60'}`}>Rechnungsbetrag (€) *</label>
               <input
                 type="text"
                 value={editForm.invoiceAmount}
                 onChange={(e) => setEditForm(prev => ({ ...prev, invoiceAmount: e.target.value }))}
-                className={`w-full px-4 py-3 rounded-xl ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                className={`w-full px-4 py-3 rounded-xl bg-navy-800 border-navy-700 text-cream border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                 placeholder="z.B. 45,00"
               />
             </div>
@@ -3611,13 +3591,13 @@ function App() {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={cancelEditRegatta}
-                className={`flex-1 py-3 rounded-xl font-medium ${isDark ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}
+                className={`flex-1 py-3 rounded-xl font-medium bg-navy-700 text-cream/80 hover:bg-navy-600`}
               >
                 Abbrechen
               </button>
               <button
                 onClick={saveEditRegatta}
-                className="flex-1 py-3 rounded-xl bg-violet-600 text-white font-medium hover:bg-violet-500"
+                className="flex-1 py-3 rounded-xl bg-gold-400 text-cream font-medium hover:bg-gold-300"
               >
                 Speichern
               </button>
@@ -3628,11 +3608,11 @@ function App() {
         {/* Admin-Passwort Modal */}
         <Modal isOpen={showAdminPasswordModal} onClose={() => { setShowAdminPasswordModal(false); setAdminPassword(''); }} title="Admin-Zugang">
           <div className="space-y-4">
-            <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <p className={`text-sm ${'text-cream/60'}`}>
               Der Admin-Bereich ist passwortgeschützt. Bitte gib das Passwort ein.
             </p>
             <div>
-              <label className={`block text-sm mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Passwort</label>
+              <label className={`block text-sm mb-2 ${'text-cream/60'}`}>Passwort</label>
               <input
                 type="password"
                 value={adminPassword}
@@ -3646,7 +3626,7 @@ function App() {
                   }
                 }}
                 placeholder="Admin-Passwort"
-                className={`w-full px-4 py-3 rounded-xl ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'} border focus:outline-none focus:ring-2 focus:ring-violet-500`}
+                className={`w-full px-4 py-3 rounded-xl bg-navy-800 border-navy-700 text-cream border focus:outline-none focus:ring-2 focus:ring-gold-400`}
                 autoFocus
               />
             </div>
@@ -3663,7 +3643,7 @@ function App() {
                 }
               }}
               disabled={adminPassword !== ADMIN_PASSWORD}
-              className="w-full py-3 rounded-xl bg-violet-600 text-white font-medium hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 rounded-xl bg-gold-400 text-cream font-medium hover:bg-gold-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Anmelden
             </button>
@@ -3673,28 +3653,28 @@ function App() {
         {/* Admin-Übersicht Modal (nur für authentifizierte Admins) */}
         <Modal isOpen={showAdminModal && adminAuthenticated} onClose={() => setShowAdminModal(false)} title="Admin-Übersicht" size="lg">
           <div className="space-y-6">
-            <div className={`p-4 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`}>
-              <h4 className={`font-medium mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>Alle Saisons</h4>
+            <div className={`p-4 rounded-xl bg-navy-800`}>
+              <h4 className={`font-medium mb-3 ${'text-cream'}`}>Alle Saisons</h4>
               <div className="space-y-2">
                 {seasons.map(s => {
                   const seasonRegatten = allRegatten[s] || [];
                   const seasonTotal = seasonRegatten.reduce((sum, r) => sum + (r.invoiceAmount || 0), 0);
                   return (
-                    <div key={s} className={`flex items-center justify-between p-3 rounded-lg ${isDark ? 'bg-slate-700' : 'bg-white'}`}>
+                    <div key={s} className={`flex items-center justify-between p-3 rounded-lg bg-navy-700`}>
                       <div>
-                        <div className={isDark ? 'text-white' : 'text-slate-900'}>{s}</div>
-                        <div className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{seasonRegatten.length} Regatten</div>
+                        <div className={'text-cream'}>{s}</div>
+                        <div className={`text-sm text-cream/60`}>{seasonRegatten.length} Regatten</div>
                       </div>
-                      <div className={`font-medium ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>{seasonTotal.toFixed(2)} €</div>
+                      <div className={`font-medium text-success`}>{seasonTotal.toFixed(2)} €</div>
                     </div>
                   );
                 })}
               </div>
             </div>
             
-            <div className={`p-4 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`}>
-              <h4 className={`font-medium mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>Datenbank</h4>
-              <div className={`text-sm space-y-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <div className={`p-4 rounded-xl bg-navy-800`}>
+              <h4 className={`font-medium mb-3 ${'text-cream'}`}>Datenbank</h4>
+              <div className={`text-sm space-y-1 ${'text-cream/60'}`}>
                 <div>Crew-Mitglieder: {crewDatabase.length}</div>
                 <div>Gelernte Patterns: {Object.keys(learnedPatterns).length}</div>
                 <div>PDF-Anhänge im Speicher: {pdfAttachments.length}</div>
@@ -3706,7 +3686,7 @@ function App() {
                     window.location.reload();
                   }
                 }}
-                className="mt-4 px-4 py-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 text-sm"
+                className="mt-4 px-4 py-2 rounded-lg bg-coral/10 text-red-500 hover:bg-red-500/20 text-sm"
               >
                 Alle Daten löschen
               </button>
@@ -3715,7 +3695,7 @@ function App() {
                   setAdminAuthenticated(false);
                   setShowAdminModal(false);
                 }}
-                className={`mt-2 w-full px-4 py-2 rounded-lg text-sm ${isDark ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}
+                className={`mt-2 w-full px-4 py-2 rounded-lg text-sm bg-navy-700 text-cream/80 hover:bg-navy-600`}
               >
                 Admin abmelden
               </button>
@@ -3724,36 +3704,36 @@ function App() {
         </Modal>
         
         <Modal isOpen={showHelpModal} onClose={() => setShowHelpModal(false)} title="Hilfe">
-          <div className={`space-y-4 text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+          <div className={`space-y-4 text-sm text-cream/80`}>
             <div>
-              <h4 className={`font-semibold mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>Ergebnislisten hochladen</h4>
+              <h4 className={`font-semibold mb-2 ${'text-cream'}`}>Ergebnislisten hochladen</h4>
               <p>Lade die Ergebnisliste als PDF hoch. Deine Platzierung wird anhand der Segelnummer automatisch erkannt.</p>
             </div>
             <div>
-              <h4 className={`font-semibold mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>Rechnungen hochladen</h4>
+              <h4 className={`font-semibold mb-2 ${'text-cream'}`}>Rechnungen hochladen</h4>
               <p>Lade die Startgeld-Rechnung als PDF hoch. Der Betrag wird automatisch erkannt.</p>
             </div>
             <div>
-              <h4 className={`font-semibold mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>Parser-Strategien</h4>
+              <h4 className={`font-semibold mb-2 ${'text-cream'}`}>Parser-Strategien</h4>
               <p>Die App erkennt automatisch verschiedene Formate (Manage2Sail, Sailti, DSV). Bei Problemen kannst du Daten manuell korrigieren.</p>
             </div>
             <div>
-              <h4 className={`font-semibold mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>Datenspeicherung</h4>
+              <h4 className={`font-semibold mb-2 ${'text-cream'}`}>Datenspeicherung</h4>
               <p>Alle Daten werden lokal im Browser gespeichert. Lösche den Browser-Cache, um alle Daten zu entfernen.</p>
             </div>
           </div>
         </Modal>
 
         {/* Footer */}
-        <footer className={`border-t px-6 py-6 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+        <footer className={`border-t px-6 py-6 border-navy-800`}>
           <div className="max-w-6xl mx-auto flex items-center justify-between text-sm">
-            <div className={`flex items-center gap-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+            <div className={`flex items-center gap-2 ${'text-cream/50'}`}>
               <span className="w-5 h-5">{Icons.boat}</span>
               <span>© {new Date().getFullYear()} Tegeler Segel-Club e.V.</span>
             </div>
             <div className="flex items-center gap-4">
-              <a href="https://www.tegeler-segel-club.de" target="_blank" rel="noopener noreferrer" className={`${isDark ? 'text-slate-500 hover:text-white' : 'text-slate-400 hover:text-slate-900'}`}>Website</a>
-              <a href="mailto:vorstand@tegeler-segel-club.de" className={`${isDark ? 'text-slate-500 hover:text-white' : 'text-slate-400 hover:text-slate-900'}`}>Kontakt</a>
+              <a href="https://www.tegeler-segel-club.de" target="_blank" rel="noopener noreferrer" className={`text-cream/50 hover:text-cream`}>Website</a>
+              <a href="mailto:vorstand@tegeler-segel-club.de" className={`text-cream/50 hover:text-cream`}>Kontakt</a>
             </div>
           </div>
         </footer>

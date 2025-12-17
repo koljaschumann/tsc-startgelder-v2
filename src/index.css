@@ -2,24 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom scrollbar für Dark Mode */
+/* Basis-Body-Styles */
+body {
+  background-color: #0a1628;
+  color: #faf8f5;
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(15, 33, 64, 0.5);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(100, 100, 100, 0.5);
+  background: rgba(212, 168, 83, 0.3);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 100, 100, 0.7);
+  background: rgba(212, 168, 83, 0.5);
 }
 
 /* Smooth transitions */
@@ -43,4 +50,10 @@ input[type="number"]::-webkit-outer-spin-button {
 
 input[type="number"] {
   -moz-appearance: textfield;
+}
+
+/* Selection color */
+::selection {
+  background-color: rgba(212, 168, 83, 0.3);
+  color: #faf8f5;
 }
