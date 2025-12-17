@@ -33,7 +33,7 @@ const EMAILJS_CONFIG = {
   serviceId: 'service_tsc', // EmailJS Service ID
   templateId: 'template_antrag', // EmailJS Template ID
   publicKey: 'YOUR_PUBLIC_KEY', // EmailJS Public Key
-  recipientEmail: 'vorstand@tegeler-segel-club.de', // Empfänger E-Mail
+  recipientEmail: 'kolja.schumann@outlook.de', // Empfänger E-Mail
 };
 
 const BOAT_CLASSES = {
