@@ -4,6 +4,7 @@ import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 import Tesseract from 'tesseract.js'
 import { PDFDocument } from 'pdf-lib'
+import emailjs from '@emailjs/browser'
 
 // PDF.js Worker
 const setupPdfWorker = () => {
@@ -25,6 +26,16 @@ const useTheme = () => {
 // ============================================
 // KONFIGURATION
 // ============================================
+
+// EmailJS Konfiguration (https://emailjs.com)
+// Bitte eigene Zugangsdaten eintragen
+const EMAILJS_CONFIG = {
+  serviceId: 'service_tsc', // EmailJS Service ID
+  templateId: 'template_antrag', // EmailJS Template ID
+  publicKey: 'YOUR_PUBLIC_KEY', // EmailJS Public Key
+  recipientEmail: 'vorstand@tegeler-segel-club.de', // Empfänger E-Mail
+};
+
 const BOAT_CLASSES = {
   'Optimist': { crew: 1, alias: ['Opti', 'Optimist A', 'Optimist B'] },
   'ILCA 4': { crew: 1, alias: ['Laser 4.7', 'Laser4.7'] },
@@ -411,6 +422,8 @@ function App() {
   const [showCrewModal, setShowCrewModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showAdminPasswordModal, setShowAdminPasswordModal] = useState(false);
+  const [showAntragModal, setShowAntragModal] = useState(false);
+  const [yearFilter, setYearFilter] = useState('Alle');
   const [adminPassword, setAdminPassword] = useState('');
   const [adminAuthenticated, setAdminAuthenticated] = useState(false);
   
@@ -1836,6 +1849,395 @@ function App() {
     }
   };
 
+  // Antrag PDF generieren (mit angehängten Dokumenten)
+  const generateAntragPDF = async () => {
+    if (regatten.length === 0) {
+      setError('Keine Regatten vorhanden');
+      return;
+    }
+
+    try {
+      const doc = new jsPDF();
+
+      // Regatten nach Datum sortieren (aufsteigend)
+      const sortedRegatten = [...regatten].sort((a, b) => {
+        if (!a.date && !b.date) return 0;
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return new Date(a.date) - new Date(b.date);
+      });
+
+      // === ÜBERSICHTSSEITE ===
+
+      // Header
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Antrag auf Erstattung von Startgeldern', 105, 25, { align: 'center' });
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Tegeler Segel-Club e.V. - Saison ${currentSeason}`, 105, 33, { align: 'center' });
+
+      // Antragsteller-Daten (linke Seite)
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Antragsteller:', 20, 50);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text(`Name: ${boatData.seglername || '-'}`, 20, 58);
+      doc.text(`Segelnummer: ${boatData.segelnummer || '-'}`, 20, 65);
+      doc.text(`Bootsklasse: ${boatData.bootsklasse || '-'}`, 20, 72);
+
+      // Bankverbindung (rechte Seite)
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text('Bankverbindung:', 110, 50);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text(`IBAN: ${boatData.iban || '-'}`, 110, 58);
+      doc.text(`Kontoinhaber: ${boatData.kontoinhaber || boatData.seglername || '-'}`, 110, 65);
+
+      // Tabelle mit allen Regatten
+      const tableData = sortedRegatten.map((r, i) => [
+        i + 1,
+        r.regattaName || '-',
+        r.date ? new Date(r.date).toLocaleDateString('de-DE') : '-',
+        `${r.placement || '-'}. / ${r.participants || r.totalParticipants || '-'}`,
+        r.races || r.raceCount || '-',
+        r.crew?.length > 0 ? r.crew.map(c => c.name).join(', ') : '-',
+        `${(r.invoiceAmount || 0).toFixed(2)} €`
+      ]);
+
+      if (typeof doc.autoTable === 'function') {
+        doc.autoTable({
+          startY: 85,
+          head: [['#', 'Regatta', 'Datum', 'Platz', 'WF', 'Crew', 'Betrag']],
+          body: tableData,
+          theme: 'striped',
+          headStyles: { fillColor: [139, 92, 246] }, // Purple/Violet
+          styles: { fontSize: 9, cellPadding: 3 },
+          columnStyles: {
+            0: { cellWidth: 10 },
+            1: { cellWidth: 55 },
+            2: { cellWidth: 22 },
+            3: { cellWidth: 22 },
+            4: { cellWidth: 12 },
+            5: { cellWidth: 35 },
+            6: { cellWidth: 22 },
+          }
+        });
+      }
+
+      // Gesamtbetrag
+      const finalY = doc.lastAutoTable?.finalY + 10 || 200;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text(`Gesamtbetrag: ${stats.totalAmount.toFixed(2)} €`, 20, finalY);
+
+      // Datum und Unterschrift
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text(`Datum: ${new Date().toLocaleDateString('de-DE')}`, 20, finalY + 25);
+      doc.line(110, finalY + 25, 190, finalY + 25);
+      doc.text('Unterschrift', 150, finalY + 30, { align: 'center' });
+
+      // Footer
+      doc.setFontSize(8);
+      doc.setTextColor(128);
+      doc.text('Erstellt mit TSC Startgeld App', 105, 285, { align: 'center' });
+
+      // === ANGEHÄNGTE DOKUMENTE MIT PDF-LIB ZUSAMMENFÜHREN ===
+      const fileName = `TSC_Erstattung_${currentSeason}_${boatData.seglername?.replace(/\s/g, '_') || 'Antrag'}.pdf`;
+
+      // jsPDF-Übersichtsseite als ArrayBuffer
+      const overviewPdfBytes = doc.output('arraybuffer');
+
+      // Finales PDF mit pdf-lib erstellen
+      const finalPdf = await PDFDocument.create();
+
+      // Übersichtsseite hinzufügen
+      const overviewDoc = await PDFDocument.load(overviewPdfBytes);
+      const overviewPages = await finalPdf.copyPages(overviewDoc, overviewDoc.getPageIndices());
+      overviewPages.forEach(page => finalPdf.addPage(page));
+
+      // Für jede Regatta: Ergebnisliste und Rechnung anhängen
+      for (const regatta of sortedRegatten) {
+        // Ergebnisliste anhängen
+        if (regatta.resultPdfData) {
+          try {
+            const resultPdf = await PDFDocument.load(regatta.resultPdfData);
+            const resultPages = await finalPdf.copyPages(resultPdf, resultPdf.getPageIndices());
+            resultPages.forEach(page => finalPdf.addPage(page));
+          } catch (e) {
+            console.log('Konnte Ergebnisliste nicht anhängen:', regatta.regattaName, e);
+          }
+        }
+
+        // Rechnung anhängen
+        if (regatta.invoicePdfData) {
+          try {
+            const invoicePdf = await PDFDocument.load(regatta.invoicePdfData);
+            const invoicePages = await finalPdf.copyPages(invoicePdf, invoicePdf.getPageIndices());
+            invoicePages.forEach(page => finalPdf.addPage(page));
+          } catch (e) {
+            console.log('Konnte Rechnung nicht anhängen:', regatta.regattaName, e);
+          }
+        }
+      }
+
+      // Download des zusammengeführten PDFs
+      const finalPdfBytes = await finalPdf.save();
+      const blob = new Blob([finalPdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      setSuccess(`Antrag "${fileName}" wurde erstellt`);
+      return { blob, fileName, finalPdfBytes };
+    } catch (err) {
+      console.error('Antrag PDF Error:', err);
+      setError('Fehler beim Erstellen des Antrags: ' + err.message);
+      return null;
+    }
+  };
+
+  // Antrag senden (E-Mail + Backend speichern)
+  const sendAntrag = async () => {
+    if (regatten.length === 0) {
+      setError('Keine Regatten vorhanden');
+      return;
+    }
+
+    if (!boatData.seglername || !boatData.segelnummer || !boatData.iban) {
+      setError('Bitte vervollständige dein Profil in den Einstellungen');
+      return;
+    }
+
+    try {
+      // 1. PDF generieren (ohne Download)
+      const pdfResult = await generateAntragPDFData();
+      if (!pdfResult) {
+        return;
+      }
+
+      // 2. Antrag-Daten für Backend/E-Mail vorbereiten
+      const antragData = {
+        id: `antrag_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        saison: currentSeason,
+        antragsteller: {
+          name: boatData.seglername,
+          segelnummer: boatData.segelnummer,
+          bootsklasse: boatData.bootsklasse,
+          iban: boatData.iban,
+          kontoinhaber: boatData.kontoinhaber || boatData.seglername,
+        },
+        regatten: regatten.map(r => ({
+          name: r.regattaName,
+          datum: r.date,
+          platz: r.placement,
+          teilnehmer: r.participants,
+          betrag: r.invoiceAmount,
+        })),
+        gesamtbetrag: stats.totalAmount,
+        status: 'eingereicht',
+      };
+
+      // 3. Lokal speichern (als einfaches Backend)
+      const gespeicherteAntraege = JSON.parse(localStorage.getItem('tsc_antraege') || '[]');
+      gespeicherteAntraege.push(antragData);
+      localStorage.setItem('tsc_antraege', JSON.stringify(gespeicherteAntraege));
+
+      // 4. E-Mail senden via EmailJS
+      if (EMAILJS_CONFIG.publicKey !== 'YOUR_PUBLIC_KEY') {
+        try {
+          const regattenListe = regatten
+            .map((r, i) => `${i + 1}. ${r.regattaName} (${r.date}) - ${r.placement}. Platz - ${r.invoiceAmount?.toFixed(2)} €`)
+            .join('\n');
+
+          await emailjs.send(
+            EMAILJS_CONFIG.serviceId,
+            EMAILJS_CONFIG.templateId,
+            {
+              to_email: EMAILJS_CONFIG.recipientEmail,
+              from_name: boatData.seglername,
+              saison: currentSeason,
+              segler_name: boatData.seglername,
+              segelnummer: boatData.segelnummer,
+              bootsklasse: boatData.bootsklasse,
+              iban: boatData.iban,
+              kontoinhaber: boatData.kontoinhaber || boatData.seglername,
+              anzahl_regatten: regatten.length,
+              regatten_liste: regattenListe,
+              gesamtbetrag: stats.totalAmount.toFixed(2),
+              antrag_id: antragData.id,
+            },
+            EMAILJS_CONFIG.publicKey
+          );
+
+          setSuccess(`Antrag erfolgreich gesendet! E-Mail wurde an ${EMAILJS_CONFIG.recipientEmail} geschickt.`);
+        } catch (emailError) {
+          console.error('Email Error:', emailError);
+          // Trotzdem als Erfolg markieren, da lokal gespeichert
+          setSuccess('Antrag wurde lokal gespeichert. E-Mail-Versand fehlgeschlagen - bitte manuell weiterleiten.');
+        }
+      } else {
+        // Keine EmailJS-Konfiguration - nur lokal speichern
+        setSuccess('Antrag wurde lokal gespeichert. Für E-Mail-Versand bitte EmailJS konfigurieren.');
+      }
+
+      // 5. PDF herunterladen
+      const url = URL.createObjectURL(pdfResult.blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = pdfResult.fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    } catch (err) {
+      console.error('Antrag senden Error:', err);
+      setError('Fehler beim Senden des Antrags: ' + err.message);
+    }
+  };
+
+  // PDF generieren ohne automatischen Download (für sendAntrag)
+  const generateAntragPDFData = async () => {
+    if (regatten.length === 0) return null;
+
+    try {
+      const doc = new jsPDF();
+
+      const sortedRegatten = [...regatten].sort((a, b) => {
+        if (!a.date && !b.date) return 0;
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return new Date(a.date) - new Date(b.date);
+      });
+
+      // Header
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Antrag auf Erstattung von Startgeldern', 105, 25, { align: 'center' });
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Tegeler Segel-Club e.V. - Saison ${currentSeason}`, 105, 33, { align: 'center' });
+
+      // Antragsteller-Daten
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Antragsteller:', 20, 50);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text(`Name: ${boatData.seglername || '-'}`, 20, 58);
+      doc.text(`Segelnummer: ${boatData.segelnummer || '-'}`, 20, 65);
+      doc.text(`Bootsklasse: ${boatData.bootsklasse || '-'}`, 20, 72);
+
+      // Bankverbindung
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text('Bankverbindung:', 110, 50);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text(`IBAN: ${boatData.iban || '-'}`, 110, 58);
+      doc.text(`Kontoinhaber: ${boatData.kontoinhaber || boatData.seglername || '-'}`, 110, 65);
+
+      // Tabelle
+      const tableData = sortedRegatten.map((r, i) => [
+        i + 1,
+        r.regattaName || '-',
+        r.date ? new Date(r.date).toLocaleDateString('de-DE') : '-',
+        `${r.placement || '-'}. / ${r.participants || r.totalParticipants || '-'}`,
+        r.races || r.raceCount || '-',
+        r.crew?.length > 0 ? r.crew.map(c => c.name).join(', ') : '-',
+        `${(r.invoiceAmount || 0).toFixed(2)} €`
+      ]);
+
+      if (typeof doc.autoTable === 'function') {
+        doc.autoTable({
+          startY: 85,
+          head: [['#', 'Regatta', 'Datum', 'Platz', 'WF', 'Crew', 'Betrag']],
+          body: tableData,
+          theme: 'striped',
+          headStyles: { fillColor: [139, 92, 246] },
+          styles: { fontSize: 9, cellPadding: 3 },
+          columnStyles: {
+            0: { cellWidth: 10 },
+            1: { cellWidth: 55 },
+            2: { cellWidth: 22 },
+            3: { cellWidth: 22 },
+            4: { cellWidth: 12 },
+            5: { cellWidth: 35 },
+            6: { cellWidth: 22 },
+          }
+        });
+      }
+
+      // Gesamtbetrag
+      const finalY = doc.lastAutoTable?.finalY + 10 || 200;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text(`Gesamtbetrag: ${stats.totalAmount.toFixed(2)} €`, 20, finalY);
+
+      // Datum und Unterschrift
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text(`Datum: ${new Date().toLocaleDateString('de-DE')}`, 20, finalY + 25);
+      doc.line(110, finalY + 25, 190, finalY + 25);
+      doc.text('Unterschrift', 150, finalY + 30, { align: 'center' });
+
+      // Footer
+      doc.setFontSize(8);
+      doc.setTextColor(128);
+      doc.text('Erstellt mit TSC Startgeld App', 105, 285, { align: 'center' });
+
+      // PDFs zusammenführen
+      const fileName = `TSC_Erstattung_${currentSeason}_${boatData.seglername?.replace(/\s/g, '_') || 'Antrag'}.pdf`;
+      const overviewPdfBytes = doc.output('arraybuffer');
+      const finalPdf = await PDFDocument.create();
+
+      const overviewDoc = await PDFDocument.load(overviewPdfBytes);
+      const overviewPages = await finalPdf.copyPages(overviewDoc, overviewDoc.getPageIndices());
+      overviewPages.forEach(page => finalPdf.addPage(page));
+
+      for (const regatta of sortedRegatten) {
+        if (regatta.resultPdfData) {
+          try {
+            const resultPdf = await PDFDocument.load(regatta.resultPdfData);
+            const resultPages = await finalPdf.copyPages(resultPdf, resultPdf.getPageIndices());
+            resultPages.forEach(page => finalPdf.addPage(page));
+          } catch (e) {
+            console.log('Konnte Ergebnisliste nicht anhängen:', regatta.regattaName, e);
+          }
+        }
+        if (regatta.invoicePdfData) {
+          try {
+            const invoicePdf = await PDFDocument.load(regatta.invoicePdfData);
+            const invoicePages = await finalPdf.copyPages(invoicePdf, invoicePdf.getPageIndices());
+            invoicePages.forEach(page => finalPdf.addPage(page));
+          } catch (e) {
+            console.log('Konnte Rechnung nicht anhängen:', regatta.regattaName, e);
+          }
+        }
+      }
+
+      const finalPdfBytes = await finalPdf.save();
+      const blob = new Blob([finalPdfBytes], { type: 'application/pdf' });
+
+      return { blob, fileName, finalPdfBytes };
+    } catch (err) {
+      console.error('PDF Generation Error:', err);
+      return null;
+    }
+  };
+
   const generateCSV = () => {
     if (regatten.length === 0) {
       setError('Keine Regatten vorhanden');
@@ -2259,7 +2661,7 @@ function App() {
         {success && <Toast message={success} type="success" onClose={() => setSuccess(null)} />}
         {error && <Toast message={error} type="error" onClose={() => setError(null)} />}
         
-        {/* Header */}
+        {/* Header mit Tabs */}
         <nav className={`sticky top-0 z-40 border-b backdrop-blur-xl ${
           isDark
             ? 'bg-navy-900/90 border-gold-400/20'
@@ -2267,6 +2669,7 @@ function App() {
         }`}>
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <div className="flex items-center justify-between h-16">
+              {/* Logo */}
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center ${
                   isDark
@@ -2275,190 +2678,333 @@ function App() {
                 }`}>
                   {Icons.boat}
                 </div>
-                <div>
-                  <h1 className={`font-bold ${isDark ? 'text-cream' : 'text-light-text'}`}>TSC Startgeld</h1>
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className={isDark ? 'text-cream/50' : 'text-light-muted'}>Saison</span>
-                    <button
-                      onClick={() => setShowSeasonModal(true)}
-                      className={`font-medium ${isDark ? 'text-gold-400 hover:text-gold-300' : 'text-teal-600 hover:text-teal-500'}`}
-                    >
-                      {currentSeason}
-                    </button>
-                  </div>
+                <div className="hidden sm:block">
+                  <h1 className={`font-bold ${isDark ? 'text-cream' : 'text-light-text'}`}>TSC Startgelder</h1>
+                  <div className={`text-xs ${isDark ? 'text-cream/50' : 'text-light-muted'}`}>Tegeler Segel-Club e.V.</div>
                 </div>
               </div>
 
+              {/* Tabs im Header */}
+              <div className={`hidden md:flex items-center gap-1 px-2 py-1.5 rounded-full ${isDark ? 'bg-navy-800/50' : 'bg-light-border/30'}`}>
+                {[
+                  { id: 'dashboard', icon: Icons.grid, label: 'Übersicht' },
+                  { id: 'list', icon: Icons.list, label: 'Regatten', badge: regatten.length },
+                  { id: 'add', icon: Icons.plus, label: 'Hinzufügen' },
+                  { id: 'export', icon: Icons.chart, label: 'Statistik' },
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
+                      activeTab === tab.id
+                        ? isDark
+                          ? 'bg-navy-700 text-cream'
+                          : 'bg-white text-light-text shadow-sm'
+                        : isDark
+                          ? 'text-cream/60 hover:text-cream'
+                          : 'text-light-muted hover:text-light-text'
+                    }`}
+                  >
+                    <span className="w-4 h-4">{tab.icon}</span>
+                    <span>{tab.label}</span>
+                    {tab.badge > 0 && (
+                      <span className={`px-1.5 py-0.5 rounded-full text-xs ${
+                        isDark ? 'bg-gold-400 text-navy-900' : 'bg-teal-500 text-white'
+                      }`}>{tab.badge}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Right Side: User + Actions */}
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => {
-                    if (adminAuthenticated) {
-                      setShowAdminModal(true);
-                    } else {
-                      setShowAdminPasswordModal(true);
-                    }
-                  }}
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                    adminAuthenticated
-                      ? isDark ? 'bg-gold-400/20 text-gold-400 hover:bg-gold-400/30' : 'bg-teal-500/20 text-teal-600 hover:bg-teal-500/30'
-                      : isDark ? 'bg-navy-800 text-cream/50 hover:text-cream' : 'bg-light-border text-light-muted hover:text-light-text'
-                  }`}
-                  title={adminAuthenticated ? "Admin-Bereich" : "Admin-Login"}
-                >
-                  {adminAuthenticated ? Icons.settings : Icons.lock}
-                </button>
-                <button
-                  onClick={() => setShowHelpModal(true)}
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                    isDark
-                      ? 'bg-navy-800 text-cream/50 hover:text-cream'
-                      : 'bg-light-border text-light-muted hover:text-light-text'
-                  }`}
-                >
-                  {Icons.info}
-                </button>
-                <button
                   onClick={toggleTheme}
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
                     isDark
-                      ? 'bg-navy-800 text-cream/50 hover:text-cream'
-                      : 'bg-light-border text-light-muted hover:text-light-text'
+                      ? 'text-cream/50 hover:text-cream'
+                      : 'text-light-muted hover:text-light-text'
                   }`}
                   title={isDark ? 'Light Mode' : 'Dark Mode'}
                 >
                   {isDark ? Icons.sun : Icons.moon}
                 </button>
+                <button
+                  onClick={() => setActiveTab('settings')}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors ${
+                    isDark
+                      ? 'bg-navy-800 hover:bg-navy-700'
+                      : 'bg-light-border hover:bg-gray-200'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                    isDark
+                      ? 'bg-gold-400 text-navy-900'
+                      : 'bg-teal-500 text-white'
+                  }`}>
+                    {boatData.seglername ? boatData.seglername.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase() : 'XX'}
+                  </div>
+                  <span className={`hidden sm:inline text-sm font-medium ${isDark ? 'text-cream' : 'text-light-text'}`}>
+                    {boatData.seglername || 'Profil'}
+                  </span>
+                </button>
               </div>
             </div>
           </div>
-        </nav>
 
-        {/* Tab Navigation */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
-          <div className={`flex gap-1 p-1 rounded-xl ${isDark ? 'bg-navy-800/50' : 'bg-light-border/50'}`}>
-            {[
-              { id: 'dashboard', icon: Icons.grid, label: 'Übersicht' },
-              { id: 'add', icon: Icons.plus, label: 'Hinzufügen' },
-              { id: 'list', icon: Icons.list, label: `Liste (${regatten.length})` },
-              { id: 'crew', icon: Icons.users, label: 'Crew' },
-              { id: 'export', icon: Icons.download, label: 'Export' },
-              { id: 'settings', icon: Icons.settings, label: 'Daten' },
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                  activeTab === tab.id
-                    ? isDark
-                      ? 'bg-gold-400 text-navy-900 shadow-lg shadow-gold-400/25'
-                      : 'bg-teal-500 text-white shadow-lg shadow-teal-500/25'
-                    : isDark
-                      ? 'text-cream/60 hover:text-cream hover:bg-navy-700/50'
-                      : 'text-light-muted hover:text-light-text hover:bg-white/50'
-                }`}
-              >
-                <span className="w-4 h-4">{tab.icon}</span>
-                <span className="hidden sm:inline">{tab.label}</span>
-              </button>
-            ))}
+          {/* Mobile Tab Bar */}
+          <div className={`md:hidden border-t ${isDark ? 'border-navy-700' : 'border-light-border'}`}>
+            <div className="flex">
+              {[
+                { id: 'dashboard', icon: Icons.grid, label: 'Übersicht' },
+                { id: 'list', icon: Icons.list, label: 'Regatten' },
+                { id: 'add', icon: Icons.plus, label: 'Hinzufügen' },
+                { id: 'export', icon: Icons.chart, label: 'Statistik' },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 py-3 flex flex-col items-center gap-1 text-xs ${
+                    activeTab === tab.id
+                      ? isDark ? 'text-gold-400' : 'text-teal-600'
+                      : isDark ? 'text-cream/50' : 'text-light-muted'
+                  }`}
+                >
+                  <span className="w-5 h-5">{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        </nav>
 
         {/* Main Content */}
         <main className="max-w-6xl mx-auto px-4 sm:px-6 pb-12">
           
           {/* === DASHBOARD === */}
           {activeTab === 'dashboard' && (
-            <div className="space-y-6">
-              {/* Hero Stats Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <StatCard icon={Icons.trophy} label="Regatten" value={stats.totalRegatten} color="gold" />
-                <StatCard icon={Icons.chart} label="Erstattung" value={`${stats.totalAmount.toFixed(0)} €`} color="emerald" />
-                <StatCard icon={Icons.trophy} label="Beste Platzierung" value={stats.bestPlacement ? `${stats.bestPlacement}.` : '-'} color="amber" />
-                <StatCard icon={Icons.list} label="Wettfahrten" value={stats.totalRaces} color="cyan" />
+            <div className="space-y-6 pt-6">
+              {/* Hero Card */}
+              <div className={`relative rounded-2xl p-6 md:p-8 overflow-hidden ${
+                isDark
+                  ? 'bg-gradient-to-br from-gold-400 to-gold-500'
+                  : 'bg-gradient-to-br from-teal-500 to-teal-600'
+              }`}>
+                {/* Background decoration */}
+                <div className="absolute right-0 top-0 w-1/2 h-full opacity-10">
+                  <svg viewBox="0 0 200 200" className="w-full h-full">
+                    <path fill="currentColor" d="M100,10 L180,80 L150,180 L50,180 L20,80 Z" />
+                  </svg>
+                </div>
+
+                <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                  <div className="flex-1">
+                    {/* Season Badge */}
+                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm mb-4 ${
+                      isDark ? 'bg-navy-900/30 text-cream' : 'bg-white/20 text-white'
+                    }`}>
+                      {Icons.calendar}
+                      <span>Saison {currentSeason} aktiv</span>
+                    </div>
+
+                    {/* Title */}
+                    <h2 className={`text-2xl md:text-3xl font-bold mb-2 ${isDark ? 'text-navy-900' : 'text-white'}`}>
+                      Deine Regatta-Übersicht
+                    </h2>
+                    <p className={`mb-6 ${isDark ? 'text-navy-900/70' : 'text-white/80'}`}>
+                      Verwalte deine Startgeld-Erstattungen einfach und übersichtlich.
+                    </p>
+
+                    {/* Stats inline */}
+                    <div className="flex flex-wrap gap-6 md:gap-10">
+                      <div>
+                        <div className={`text-3xl md:text-4xl font-bold ${isDark ? 'text-navy-900' : 'text-white'}`}>{stats.totalRegatten}</div>
+                        <div className={`text-sm ${isDark ? 'text-navy-900/60' : 'text-white/70'}`}>Regatten</div>
+                      </div>
+                      <div>
+                        <div className={`text-3xl md:text-4xl font-bold ${isDark ? 'text-navy-900' : 'text-white'}`}>{stats.totalAmount.toFixed(2)} €</div>
+                        <div className={`text-sm ${isDark ? 'text-navy-900/60' : 'text-white/70'}`}>Erstattung</div>
+                      </div>
+                      <div>
+                        <div className={`text-3xl md:text-4xl font-bold ${isDark ? 'text-navy-900' : 'text-white'}`}>{stats.bestPlacement ? `${stats.bestPlacement}.` : '-'}</div>
+                        <div className={`text-sm ${isDark ? 'text-navy-900/60' : 'text-white/70'}`}>Beste Platz.</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col gap-3 lg:min-w-[200px]">
+                    <button
+                      onClick={() => setActiveTab('add')}
+                      className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
+                        isDark
+                          ? 'bg-white text-navy-900 hover:bg-cream'
+                          : 'bg-white text-teal-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      {Icons.plus}
+                      <span>Regatta hinzufügen</span>
+                    </button>
+                    <button
+                      onClick={() => setShowAntragModal(true)}
+                      className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
+                        isDark
+                          ? 'bg-navy-900 text-gold-400 hover:bg-navy-800'
+                          : 'bg-teal-700 text-white hover:bg-teal-800'
+                      }`}
+                    >
+                      {Icons.send}
+                      <span>Antrag senden</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              {/* 2-Spalten Layout (Desktop) */}
+              {/* 2-Spalten Layout */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Hauptinhalt (2/3) */}
-                <div className="lg:col-span-2 space-y-6">
-                  {/* Letzte Regatten */}
-                  {regatten.length > 0 && (
-                    <GlassCard>
-                      <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-semibold text-cream">Letzte Regatten</h2>
-                        <button onClick={() => setActiveTab('list')} className="text-sm text-gold-400 hover:text-gold-300">Alle anzeigen</button>
+                {/* Regatten Liste (2/3) */}
+                <div className="lg:col-span-2">
+                  <GlassCard>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className={`text-lg font-semibold ${isDark ? 'text-cream' : 'text-light-text'}`}>Deine Regatten</h2>
+                      {/* Jahresfilter */}
+                      <div className={`flex gap-1 p-1 rounded-lg ${isDark ? 'bg-navy-800/50' : 'bg-light-border/50'}`}>
+                        {['Alle', currentSeason, (parseInt(currentSeason) - 1).toString()].map(year => (
+                          <button
+                            key={year}
+                            onClick={() => setYearFilter(year)}
+                            className={`px-3 py-1 rounded-md text-sm transition-all ${
+                              (yearFilter || 'Alle') === year
+                                ? isDark ? 'bg-navy-700 text-cream' : 'bg-white text-light-text shadow-sm'
+                                : isDark ? 'text-cream/50 hover:text-cream' : 'text-light-muted hover:text-light-text'
+                            }`}
+                          >
+                            {year}
+                          </button>
+                        ))}
                       </div>
+                    </div>
+
+                    {regatten.length > 0 ? (
                       <div className="space-y-2">
-                        {regatten.slice(-5).reverse().map(r => (
-                          <div key={r.id} className="flex items-center justify-between p-3 rounded-xl bg-navy-800/50">
-                            <div className="flex-1 min-w-0 mr-3">
-                              <div className="font-medium truncate text-cream">
-                                {r.regattaName?.length > 50 ? r.regattaName.slice(0, 47) + '...' : r.regattaName}
+                        {regatten
+                          .filter(r => !yearFilter || yearFilter === 'Alle' || r.date?.includes(yearFilter))
+                          .sort((a, b) => new Date(b.date) - new Date(a.date))
+                          .map(r => (
+                          <div
+                            key={r.id}
+                            onClick={() => { setEditingRegatta(r); setShowEditModal(true); }}
+                            className={`flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-all ${
+                              isDark
+                                ? 'hover:bg-navy-800/50'
+                                : 'hover:bg-light-border/50'
+                            }`}
+                          >
+                            {/* Platzierung Badge */}
+                            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0 ${
+                              isDark
+                                ? 'bg-gold-400/20 text-gold-400'
+                                : 'bg-teal-500/20 text-teal-600'
+                            }`}>
+                              {r.placement}
+                            </div>
+
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className={`font-medium truncate ${isDark ? 'text-cream' : 'text-light-text'}`}>
+                                {r.regattaName}
                               </div>
-                              <div className="text-sm text-cream/50">
-                                Platz {r.placement} • {r.invoiceAmount?.toFixed(2)} €
+                              <div className={`text-sm flex items-center gap-3 ${isDark ? 'text-cream/50' : 'text-light-muted'}`}>
+                                <span className="flex items-center gap-1">{Icons.calendar} {r.date}</span>
+                                <span>{r.races} WF</span>
+                                <span>{r.participants} Starter</span>
                               </div>
                             </div>
-                            <div className="text-2xl font-bold flex-shrink-0 text-sea-300">{r.placement}.</div>
+
+                            {/* Betrag */}
+                            <div className={`text-lg font-bold ${isDark ? 'text-sea-300' : 'text-teal-600'}`}>
+                              {r.invoiceAmount?.toFixed(2)} €
+                            </div>
+
+                            {/* Arrow */}
+                            <div className={isDark ? 'text-cream/30' : 'text-light-muted'}>
+                              {Icons.chevronRight}
+                            </div>
                           </div>
                         ))}
                       </div>
-                    </GlassCard>
-                  )}
-
-                  {regatten.length === 0 && (
-                    <GlassCard className="text-center py-12">
-                      <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gold-400/10 flex items-center justify-center text-gold-400">
-                        {Icons.boat}
+                    ) : (
+                      <div className="text-center py-12">
+                        <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center ${
+                          isDark ? 'bg-gold-400/10 text-gold-400' : 'bg-teal-500/10 text-teal-500'
+                        }`}>
+                          {Icons.boat}
+                        </div>
+                        <h3 className={`text-lg font-medium mb-2 ${isDark ? 'text-cream' : 'text-light-text'}`}>Noch keine Regatten</h3>
+                        <p className={`mb-4 ${isDark ? 'text-cream/60' : 'text-light-muted'}`}>Füge deine erste Regatta hinzu.</p>
+                        <button
+                          onClick={() => setActiveTab('add')}
+                          className={`px-6 py-2 rounded-xl font-medium ${
+                            isDark ? 'bg-gold-400 text-navy-900 hover:bg-gold-300' : 'bg-teal-500 text-white hover:bg-teal-600'
+                          }`}
+                        >
+                          Regatta hinzufügen
+                        </button>
                       </div>
-                      <h3 className="text-lg font-medium mb-2 text-cream">Noch keine Regatten</h3>
-                      <p className="mb-4 text-cream/60">Füge deine erste Regatta hinzu, um loszulegen.</p>
-                      <button
-                        onClick={() => setActiveTab('add')}
-                        className="px-6 py-2 rounded-xl bg-gold-400 text-navy-900 hover:bg-gold-300"
-                      >
-                        Regatta hinzufügen
-                      </button>
-                    </GlassCard>
-                  )}
+                    )}
+                  </GlassCard>
                 </div>
 
-                {/* Sidebar (1/3) */}
+                {/* Segler Profil Sidebar (1/3) */}
                 <div className="space-y-6">
-                  {/* Quick Actions */}
-                  <GlassCard>
-                    <h2 className="text-lg font-semibold mb-4 text-cream">Schnellaktionen</h2>
-                    <div className="space-y-3">
+                  <div className={`rounded-2xl overflow-hidden ${isDark ? 'bg-navy-800/50' : 'bg-white border border-light-border'}`}>
+                    {/* Header mit Icon */}
+                    <div className={`h-24 flex items-center justify-center ${
+                      isDark
+                        ? 'bg-gradient-to-br from-gold-400/20 to-gold-500/10'
+                        : 'bg-gradient-to-br from-teal-500/20 to-teal-600/10'
+                    }`}>
+                      <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                        isDark ? 'bg-gold-400/20 text-gold-400' : 'bg-teal-500/20 text-teal-600'
+                      }`}>
+                        {Icons.boat}
+                      </div>
+                    </div>
+
+                    {/* Profil Daten */}
+                    <div className="p-4 space-y-3">
+                      <div className="flex justify-between">
+                        <span className={isDark ? 'text-cream/60' : 'text-light-muted'}>Segler:in</span>
+                        <span className={`font-medium ${isDark ? 'text-cream' : 'text-light-text'}`}>{boatData.seglername || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className={isDark ? 'text-cream/60' : 'text-light-muted'}>Bootsklasse</span>
+                        <span className={`font-medium ${isDark ? 'text-cream' : 'text-light-text'}`}>{boatData.bootsklasse || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className={isDark ? 'text-cream/60' : 'text-light-muted'}>Segelnummer</span>
+                        <span className={`font-medium ${isDark ? 'text-cream' : 'text-light-text'}`}>{boatData.segelnummer || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className={isDark ? 'text-cream/60' : 'text-light-muted'}>Verein</span>
+                        <span className={`font-medium ${isDark ? 'text-cream' : 'text-light-text'}`}>TSC</span>
+                      </div>
+                    </div>
+
+                    {/* Edit Button */}
+                    <div className="px-4 pb-4">
                       <button
-                        onClick={() => setActiveTab('add')}
-                        className="w-full p-4 rounded-xl text-left transition-all bg-navy-800/50 hover:bg-navy-700/50"
+                        onClick={() => setActiveTab('settings')}
+                        className={`w-full py-2 rounded-lg text-sm font-medium transition-all ${
+                          isDark
+                            ? 'bg-navy-700 text-cream hover:bg-navy-600'
+                            : 'bg-light-border text-light-text hover:bg-gray-200'
+                        }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-gold-400/10 flex items-center justify-center text-gold-400">{Icons.plus}</div>
-                          <div className="font-medium text-cream">Regatta hinzufügen</div>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => { setActiveTab('export'); generatePDF(); }}
-                        className="w-full p-4 rounded-xl text-left transition-all bg-navy-800/50 hover:bg-navy-700/50"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center text-success">{Icons.document}</div>
-                          <div className="font-medium text-cream">PDF erstellen</div>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => setShowCrewModal(true)}
-                        className="w-full p-4 rounded-xl text-left transition-all bg-navy-800/50 hover:bg-navy-700/50"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-sea-300/10 flex items-center justify-center text-sea-300">{Icons.userPlus}</div>
-                          <div className="font-medium text-cream">Crew verwalten</div>
-                        </div>
+                        Profil bearbeiten
                       </button>
                     </div>
-                  </GlassCard>
+                  </div>
                 </div>
               </div>
             </div>
@@ -3790,6 +4336,124 @@ function App() {
             <div>
               <h4 className={`font-semibold mb-2 ${'text-cream'}`}>Datenspeicherung</h4>
               <p>Alle Daten werden lokal im Browser gespeichert. Lösche den Browser-Cache, um alle Daten zu entfernen.</p>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Antrag Modal */}
+        <Modal isOpen={showAntragModal} onClose={() => setShowAntragModal(false)} title="Antrag auf Erstattung" size="lg">
+          <div className="space-y-6">
+            {/* Antragsteller Info */}
+            <div className={`p-4 rounded-xl ${isDark ? 'bg-navy-800/50' : 'bg-light-border/30'}`}>
+              <h4 className={`font-semibold mb-3 ${isDark ? 'text-cream' : 'text-light-text'}`}>Antragsteller</h4>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className={isDark ? 'text-cream/50' : 'text-light-muted'}>Name:</span>
+                  <span className={`ml-2 font-medium ${isDark ? 'text-cream' : 'text-light-text'}`}>{boatData.seglername || '-'}</span>
+                </div>
+                <div>
+                  <span className={isDark ? 'text-cream/50' : 'text-light-muted'}>Segelnummer:</span>
+                  <span className={`ml-2 font-medium ${isDark ? 'text-cream' : 'text-light-text'}`}>{boatData.segelnummer || '-'}</span>
+                </div>
+                <div>
+                  <span className={isDark ? 'text-cream/50' : 'text-light-muted'}>Bootsklasse:</span>
+                  <span className={`ml-2 font-medium ${isDark ? 'text-cream' : 'text-light-text'}`}>{boatData.bootsklasse || '-'}</span>
+                </div>
+                <div>
+                  <span className={isDark ? 'text-cream/50' : 'text-light-muted'}>IBAN:</span>
+                  <span className={`ml-2 font-medium ${isDark ? 'text-cream' : 'text-light-text'}`}>{boatData.iban ? `${boatData.iban.slice(0,4)}...${boatData.iban.slice(-4)}` : '-'}</span>
+                </div>
+              </div>
+              {(!boatData.seglername || !boatData.segelnummer || !boatData.iban) && (
+                <div className={`mt-3 p-3 rounded-lg flex items-center gap-2 ${isDark ? 'bg-coral/10 text-coral' : 'bg-red-50 text-red-600'}`}>
+                  {Icons.warning}
+                  <span className="text-sm">Bitte vervollständige dein Profil in den Einstellungen.</span>
+                </div>
+              )}
+            </div>
+
+            {/* Regatten Übersicht */}
+            <div>
+              <h4 className={`font-semibold mb-3 ${isDark ? 'text-cream' : 'text-light-text'}`}>
+                Regatten ({regatten.length})
+              </h4>
+              <div className={`rounded-xl border overflow-hidden ${isDark ? 'border-navy-700' : 'border-light-border'}`}>
+                <table className="w-full text-sm">
+                  <thead className={isDark ? 'bg-navy-800' : 'bg-light-border/50'}>
+                    <tr>
+                      <th className={`px-3 py-2 text-left ${isDark ? 'text-cream/70' : 'text-light-muted'}`}>#</th>
+                      <th className={`px-3 py-2 text-left ${isDark ? 'text-cream/70' : 'text-light-muted'}`}>Regatta</th>
+                      <th className={`px-3 py-2 text-left ${isDark ? 'text-cream/70' : 'text-light-muted'}`}>Datum</th>
+                      <th className={`px-3 py-2 text-left ${isDark ? 'text-cream/70' : 'text-light-muted'}`}>Platz</th>
+                      <th className={`px-3 py-2 text-right ${isDark ? 'text-cream/70' : 'text-light-muted'}`}>Betrag</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {regatten.sort((a, b) => new Date(a.date) - new Date(b.date)).map((r, idx) => (
+                      <tr key={r.id} className={isDark ? 'border-t border-navy-700' : 'border-t border-light-border'}>
+                        <td className={`px-3 py-2 ${isDark ? 'text-cream/50' : 'text-light-muted'}`}>{idx + 1}</td>
+                        <td className={`px-3 py-2 ${isDark ? 'text-cream' : 'text-light-text'}`}>{r.regattaName}</td>
+                        <td className={`px-3 py-2 ${isDark ? 'text-cream/70' : 'text-light-muted'}`}>{r.date}</td>
+                        <td className={`px-3 py-2 ${isDark ? 'text-cream/70' : 'text-light-muted'}`}>{r.placement}. / {r.participants}</td>
+                        <td className={`px-3 py-2 text-right font-medium ${isDark ? 'text-sea-300' : 'text-teal-600'}`}>{r.invoiceAmount?.toFixed(2)} €</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className={isDark ? 'bg-navy-800' : 'bg-light-border/50'}>
+                    <tr>
+                      <td colSpan={4} className={`px-3 py-2 font-semibold ${isDark ? 'text-cream' : 'text-light-text'}`}>Gesamtbetrag</td>
+                      <td className={`px-3 py-2 text-right font-bold text-lg ${isDark ? 'text-gold-400' : 'text-teal-600'}`}>
+                        {stats.totalAmount.toFixed(2)} €
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+
+            {/* Angehängte Dokumente Info */}
+            <div className={`p-4 rounded-xl ${isDark ? 'bg-navy-800/30' : 'bg-light-border/20'}`}>
+              <div className="flex items-center gap-2 mb-2">
+                {Icons.document}
+                <span className={`font-medium ${isDark ? 'text-cream' : 'text-light-text'}`}>Angehängte Dokumente</span>
+              </div>
+              <p className={`text-sm ${isDark ? 'text-cream/60' : 'text-light-muted'}`}>
+                Der Antrag enthält automatisch alle hochgeladenen Ergebnislisten und Rechnungen zu den Regatten.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => {
+                  generateAntragPDF();
+                  setShowAntragModal(false);
+                }}
+                disabled={!boatData.seglername || !boatData.segelnummer || regatten.length === 0}
+                className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isDark
+                    ? 'bg-navy-700 text-cream hover:bg-navy-600'
+                    : 'bg-light-border text-light-text hover:bg-gray-200'
+                }`}
+              >
+                {Icons.download}
+                <span>PDF herunterladen</span>
+              </button>
+              <button
+                onClick={async () => {
+                  setShowAntragModal(false);
+                  await sendAntrag();
+                }}
+                disabled={!boatData.seglername || !boatData.segelnummer || !boatData.iban || regatten.length === 0}
+                className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isDark
+                    ? 'bg-gold-400 text-navy-900 hover:bg-gold-300'
+                    : 'bg-teal-500 text-white hover:bg-teal-600'
+                }`}
+              >
+                {Icons.send}
+                <span>Antrag senden</span>
+              </button>
             </div>
           </div>
         </Modal>
